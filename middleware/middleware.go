@@ -5,6 +5,7 @@ import (
 	"math"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/AdityaByte/bytemesh/chunk"
 )
@@ -15,12 +16,12 @@ func decideParts(filesize float64) float64 {
 	return math.Ceil(filesize / sizeOfChunk)
 }
 
-func CreateChunk(file *os.File) (*[]chunk.Chunk, error) {
+func CreateChunk(file *os.File) (*[]chunk.Chunk, string, error) {
 
 	fileData, err := os.ReadFile(file.Name())
 
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 
@@ -60,5 +61,11 @@ func CreateChunk(file *os.File) (*[]chunk.Chunk, error) {
 		})
 	}
 
-	return &chunks,nil
+	fmt.Println("File name is :", file.Name())
+
+	newString := strings.TrimLeft(file.Name(), "storage/")
+
+	fmt.Println("New String is:", newString)
+
+	return &chunks, newString, nil
 }
