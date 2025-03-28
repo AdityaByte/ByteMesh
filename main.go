@@ -34,13 +34,14 @@ func main() {
 		return
 	}
 
-	chunks, err := middleware.CreateChunk(file)
+	chunks, filename, err := middleware.CreateChunk(file)
+	
 
 	if err != nil {
 		fmt.Println(err)
 	}
 
-	if err := server.SendChunks(chunks); err != nil {
+	if err := server.SendChunks(chunks, filename); err != nil {
 		fmt.Println("Error sending chunks to the server nodes", err)
 		return
 	}
