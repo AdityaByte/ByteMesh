@@ -1,16 +1,22 @@
 package main
 
 import (
-	"bufio"
+	"encoding/gob"
 	"fmt"
 	"net"
 	"os"
 	"strings"
 )
 
+type chunkData struct {
+	Filename string
+	FileId   string
+	Data     []byte
+}
+
 type Server struct {
 	listenAddr string
-	listener    net.Listener
+	listener   net.Listener
 }
 
 func NewServer(listenAddr string) *Server {
@@ -32,7 +38,7 @@ func (s *Server) Start() error {
 	return nil
 }
 
-func (s *Server) acceptConnection()  {
+func (s *Server) acceptConnection() {
 	for {
 		conn, err := s.listener.Accept()
 		if err != nil {
@@ -45,46 +51,34 @@ func (s *Server) acceptConnection()  {
 
 func handleConnection(conn net.Conn) {
 	defer conn.Close()
-	reader := bufio.NewReader(conn)
+	decoder := gob.NewDecoder(conn)
 
-	chunkName, err := reader.ReadString('\n')
+	var recievedData chunkData
+	err := decoder.Decode(&recievedData)
+
+	fmt.Println("File id", recievedData.FileId)
+	fmt.Println("File name", recievedData.Filename)
+	fmt.Println("File data len", len(recievedData.Data))
+
 	if err != nil {
-		if err.Error() == "EOF" {
-			fmt.Println("No chunks recieved closing connection")
-			return
-		}
-		fmt.Println("Error reading chunk name:", err)
+		fmt.Println("Error while decoding data", err)
 		return
 	}
 
-	chunkName = strings.TrimSpace(chunkName)
-	if chunkName == "" {
-		fmt.Println("Recieved an empty chunk name closing connection.")
-		return
-	}
+	err = os.MkdirAll(fmt.Sprintf("storage/%s", strings.Trim(recievedData.Filename, "\n")), os.ModePerm)
 
-	chunkData := make([]byte, 30*1024)
-	n, err := reader.Read(chunkData)
-	if err != nil {
-		fmt.Println("Error reading chunk data:", err)
-		return
-	}
-
-	// Saving the chunk to the storage 
-	err = os.MkdirAll("storage/", os.ModePerm)
 	if err != nil {
 		fmt.Println("Error creating directory", err)
 		return
 	}
 
-	err = os.WriteFile("storage/"+chunkName, chunkData[:n], 0644)
+	err = os.WriteFile(fmt.Sprintf("storage/%s/%s", strings.Trim(recievedData.Filename, "\n"), recievedData.FileId), recievedData.Data, 0644)
+
 	if err != nil {
 		fmt.Println("Error saving file", err)
-		return
 	}
 
-	fmt.Println("Chunk saved successfully..")
-
+	fmt.Println("Chunk data saved successfully")
 }
 
 func main() {
