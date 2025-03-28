@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"encoding/gob"
 	"fmt"
 	"net"
 	"os"
+	"strings"
 )
 
 type metaData struct {
@@ -55,6 +57,69 @@ func (s *Server) acceptConnection() {
 
 
 func handleConnection(conn net.Conn) {
+
+	reader := bufio.NewReader(conn)
+	requestType, err := reader.ReadString('\n')
+
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	requestType = strings.TrimSpace(requestType)
+
+	if requestType == "" {
+		fmt.Println("Request type is not specified..")
+		return
+	}
+
+	fmt.Println("Requst type:", requestType)
+
+	switch(requestType) {
+	case "GET":
+		fmt.Println("Hey i am here get")
+		filename, err := reader.ReadString('\n')
+		if err != nil {
+			fmt.Println("Error occured while reading the filename", err)
+		}
+		filename = strings.TrimSpace(filename)
+
+		if filename == "" {
+			fmt.Println("Filename is empty")
+			return
+		}
+
+		fmt.Println("Filename is ", filename)
+
+		if filename == "dfs-flowchart.png" {
+			fmt.Println("Now i am here in the filename block")
+			newMetaData := &metaData{
+				Filename: "dfs-flowchart",
+				FileExtension: "png",
+				Location: map[string]string{
+					"Node1": "chunk1",
+					"Node0": "chunk2",
+				},
+			}
+
+			conn.Write([]byte("200\n"))
+
+			encoder := gob.NewEncoder(conn)
+			err = encoder.Encode(newMetaData)
+
+			if  err != nil {
+				fmt.Println("Error occured while encoding the data", err)
+				return
+			}
+		}
+	case "POST":
+		fmt.Println("Post request")
+		return
+	default:
+		fmt.Printf("The particular request %s is not found\n", requestType)
+		return
+	}
+
 	defer conn.Close()
 	metaData := &metaData{
 		Location: make(map[string]string),
