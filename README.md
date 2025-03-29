@@ -1,3 +1,23 @@
-# ByteMesh
-Simulated Distributed file system in golang.
-A Simulated Distributed File System (Simulated DFS) is a file system that mimics a true DFS but runs on a single machine rather than multiple nodes. It simulates the behavior of a real DFS (like Hadoop HDFS, Google File System, or Ceph) without actually distributing data across multiple physical servers.
+# ByteMesh - A Distributed File System (DFS) in Go  
+
+**ByteMesh** is a **Distributed File System (DFS)** built using **Golang**, designed to provide **scalable, fault-tolerant, and efficient file storage across multiple machines**. Unlike traditional DFS implementations such as **Hadoop HDFS, Google File System (GFS), or Ceph**, ByteMesh offers a **lightweight yet powerful distributed storage system** with a **TCP-based client-server architecture**.  
+
+## 🚀 Features  
+
+✅ **True Distributed Storage** – The server can be deployed on multiple machines, handling distributed file storage.  
+✅ **TCP-Based Client-Server Communication** – Uses raw TCP sockets for high-performance data transfer.  
+✅ **Metadata Management** – A dedicated metadata service tracks file locations, replication, and integrity.  
+✅ **File Chunking & Replication** – Files are split into chunks and distributed across nodes for redundancy.  
+✅ **Scalability** – Designed to scale by adding more storage nodes.     
+
+## 📌 Installation  
+
+### **Prerequisites**  
+- Go (Golang) **1.18+**  
+- MongoDB
+- Git  
+
+### **Clone the Repository**  
+```sh
+git clone https://github.com/AdityaByte/ByteMesh.git
+cd ByteMesh
