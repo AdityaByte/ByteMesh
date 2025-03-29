@@ -4,16 +4,11 @@ import (
 	"bufio"
 	"encoding/gob"
 	"fmt"
+	"namenodeserver/model"
 	"net"
 	"os"
 	"strings"
 )
-
-type metaData struct {
-	Filename string
-	FileExtension string
-	Location map[string]string
-}
 
 type Server struct {
 	listenAddr string
@@ -93,7 +88,7 @@ func handleConnection(conn net.Conn) {
 
 		if filename == "dfs-flowchart.png" {
 			fmt.Println("Now i am here in the filename block")
-			newMetaData := &metaData{
+			newMetaData := &model.MetaData{
 				Filename: "dfs-flowchart",
 				FileExtension: "png",
 				Location: map[string]string{
@@ -121,7 +116,7 @@ func handleConnection(conn net.Conn) {
 	}
 
 	defer conn.Close()
-	metaData := &metaData{
+	metaData := &model.MetaData{
 		Location: make(map[string]string),
 	}
 
@@ -143,6 +138,8 @@ func handleConnection(conn net.Conn) {
 		fmt.Println("key value data doesn't exists.")
 	}
 }
+
+
 
 func main() {
 	const addr = ":9004"
