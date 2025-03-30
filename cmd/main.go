@@ -27,15 +27,6 @@ func main() {
 
 	fileLocation := os.Args[1]
 
-	err := client.Download("dfs-flowchart.png")
-
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	return
-
 	file, err := client.Upload(fileLocation)
 
 	if err != nil {
@@ -59,4 +50,6 @@ func main() {
 		fmt.Println("chunk datasize:", len(chunk.Data), "byte")
 		fmt.Println("------------")
 	}
+
+
 }
