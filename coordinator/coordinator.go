@@ -1,6 +1,7 @@
 package coordinator
 
 import (
+	"bufio"
 	"encoding/gob"
 	"fmt"
 	"net"
@@ -17,8 +18,8 @@ type metaData struct {
 
 type chunkData struct {
 	Filename string
-	FileId string
-	Data []byte
+	FileId   string
+	Data     []byte
 }
 
 const (
@@ -71,6 +72,10 @@ func SendChunks(chunks *[]chunk.Chunk, filename string) error {
 		err := chunkData.sendChunkToDataNode(conn)
 
 		if err != nil {
+			continue
+		}
+
+		if err != nil {
 			return fmt.Errorf("error sending chunk %s to node %s: %v", chunk.Id, nodes[nodeIndex], err)
 		}
 
@@ -80,9 +85,9 @@ func SendChunks(chunks *[]chunk.Chunk, filename string) error {
 	fmt.Println(location)
 
 	metaData := metaData{
-		Filename: name,
+		Filename:      name,
 		FileExtension: extension,
-		Location: location,
+		Location:      location,
 	}
 
 	fmt.Println(metaData)
@@ -95,25 +100,49 @@ func SendChunks(chunks *[]chunk.Chunk, filename string) error {
 }
 
 func (md *metaData) sendMetaData() error {
+
 	conn, err := net.Dial("tcp", nameNode)
-
 	fmt.Println("meta data location:", md.Location)
-
+	
 	if err != nil {
 		return fmt.Errorf("Error connecting to the Name node server")
 	}
+	
+	defer conn.Close()
+	// conn.Write([]byte("POST\n")) // This is causing some error - deadlock situation instead of that using bufio.NewWriter()
+
+	writer := bufio.NewWriter(conn)
+	_, err = writer.Write([]byte("POST\n"))
+	
+	if err != nil {
+		return fmt.Errorf("Error sending post request to the server %w", err)
+	}
+	writer.Flush()
 
 	encoder := gob.NewEncoder(conn)
-	err = encoder.Encode(md)
-
-	if err != nil {
-		fmt.Errorf("Error encoding the metadata", err)
+	if err := encoder.Encode(md); err != nil {
+		return fmt.Errorf("Error encoding metadata: %v", err)
 	}
 
-	fmt.Println("MetaData sent successfully to the Name node server")
+	// ensuring that the server will get's the EOF (End of file) signal properly
+	if err = conn.(*net.TCPConn).CloseWrite(); err != nil {
+		return fmt.Errorf("Error closing the write side of connection: %v", err)
+	}
+
+	reader := bufio.NewReader(conn)
+	serverResponse, err := reader.ReadString('\n')
+	if err != nil {
+		return err
+	}
+
+	serverResponse = strings.TrimSpace(serverResponse)
+	if serverResponse != "200" {
+		return fmt.Errorf("Response is not 200", serverResponse)
+	}
+
+	fmt.Println("Metadata saved successfully to the namenode")
 	return nil
 }
-
 
 func (chunkData *chunkData) sendChunkToDataNode(conn net.Conn) error {
 	encoder := gob.NewEncoder(conn)
@@ -131,16 +160,60 @@ func (chunkData *chunkData) sendChunkToDataNode(conn net.Conn) error {
 	return nil
 }
 
-// func sendChunkToNode(conn net.Conn, chunk *chunk.Chunk, name string) error {
-// 	_, err := conn.Write([]byte(chunk.Id + "\n"))
-// 	if err != nil {
-// 		return fmt.Errorf("Failed to send chunk %s: %v", chunk.Id, err)
-// 	}
-// 	_, err = conn.Write(chunk.Data)
-// 	if err != nil {
-// 		return fmt.Errorf("Failed to send chunk %s: %v", chunk.Id, err)
-// 	}
+func sendChunkToNode(conn net.Conn, chunk *chunk.Chunk, name string) error {
+	_, err := conn.Write([]byte(chunk.Id + "\n"))
+	if err != nil {
+		return fmt.Errorf("Failed to send chunk %s: %v", chunk.Id, err)
+	}
+	_, err = conn.Write(chunk.Data)
+	if err != nil {
+		return fmt.Errorf("Failed to send chunk %s: %v", chunk.Id, err)
+	}
 
-// 	fmt.Printf("Sent chunk %s to node\n", chunk.Id)
-// 	return nil
+	fmt.Printf("Sent chunk %s to node\n", chunk.Id)
+	return nil
+}
+
+func GetChunks(filename string) (*[]chunk.Chunk, error) {
+	conn, err := net.Dial("tcp", nameNode)
+	defer conn.Close()
+	if err != nil {
+		return nil, fmt.Errorf("Failed to connect to namenode", err)
+	}
+
+	filename = strings.TrimSpace(filename)
+	if filename == "" {
+		return nil, fmt.Errorf("File name is empty")
+	}
+
+	conn.Write([]byte("GET\n" + filename + "\n"))
+
+	reader := bufio.NewReader(conn)
+	response, err := reader.ReadString('\n')
+	if err != nil {
+		return nil, err
+	}
+
+	if response != "200" {
+		return nil, fmt.Errorf("Response is not OK", response)
+	}
+
+	decoder := gob.NewDecoder(conn)
+	var recievedData metaData
+	err = decoder.Decode(&recievedData)
+
+	if err != nil {
+		return nil, fmt.Errorf("Error occured while decoding the data", err)
+	}
+
+	fmt.Println("metadata is :", recievedData)
+	return nil, nil
+}
+
+// func (metaData *metaData) FetchChunks() (*[]chunk.Chunk, error) {
+// 	mappingData := make(map[string]int)
+// 	mappingData["node0"] = 0
+// 	mappingData["node1"] = 1
+// 	mappingData["node2"] = 2
+
 // }
