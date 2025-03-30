@@ -17,11 +17,12 @@ func Upload(filelocation string) (*os.File, error) {
 
 	defer srcFile.Close()
 
+	// destPath := "../storage/" + utils.Getfilename(srcFile.Name()) // for debuggger
 	destPath := "storage/" + utils.Getfilename(srcFile.Name())
 	destFile, err := os.Create(destPath)
 
 	if err != nil {
-		return nil, fmt.Errorf("Error in creating the file at the destination path")
+		return nil, fmt.Errorf("Error in creating the file at the destination path %w", err)
 	}
 
 	defer destFile.Close()
