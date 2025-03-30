@@ -5,14 +5,12 @@ import (
 	"fmt"
 	"namenodeserver/database"
 	"namenodeserver/model"
-	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 )
 
-func pushMetaData(ctx context.Context, metadata *model.MetaData, mongoRepo *database.MongoRepository) error {
-	ctx, cancel := context.WithTimeout(ctx, time.Second*3)
-	defer cancel()
+func PushMetaData(ctx context.Context, metadata *model.MetaData, mongoRepo *database.MongoRepository) error {
+
 	result, err := mongoRepo.Collection.InsertOne(ctx, metadata)
 
 	if err != nil {
@@ -23,11 +21,9 @@ func pushMetaData(ctx context.Context, metadata *model.MetaData, mongoRepo *data
 	return nil
 }
 
-func fetchMetaData(ctx context.Context, filename string, mongoRepo *database.MongoRepository) (*model.MetaData, error) {
-	ctx, cancel := context.WithTimeout(ctx, time.Second * 3)
-	defer cancel()
+func FetchMetaData(ctx context.Context, filename string, mongoRepo *database.MongoRepository) (*model.MetaData, error) {
 
-	filter := bson.M{"filename" : filename}
+	filter := bson.M{"filename": filename}
 
 	var metaData model.MetaData // Created an instance of metadata for storing it.
 
