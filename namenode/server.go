@@ -142,7 +142,12 @@ func handleGetRequest(ctx context.Context, conn net.Conn, reader *bufio.Reader, 
 
 	fmt.Println("Filename is ", filename)
 
-	metadata, err := service.FetchMetaData(ctx, filename, mongoRepo)
+	nameAndExtension := strings.Split(filename, ".")
+	
+	name := nameAndExtension[0]
+	extension := nameAndExtension[len(nameAndExtension) - 1]
+
+	metadata, err := service.FetchMetaData(ctx, name, extension, mongoRepo)
 
 	if err != nil {
 		return err
