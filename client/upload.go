@@ -18,7 +18,7 @@ func Upload(filelocation string) (*os.File, error) {
 	defer srcFile.Close()
 
 	// destPath := "../storage/" + utils.Getfilename(srcFile.Name()) // for debuggger
-	destPath := "storage/" + utils.Getfilename(srcFile.Name())
+	destPath := "storage/" + utils.Getfilename(srcFile.Name()) 
 	destFile, err := os.Create(destPath)
 
 	if err != nil {
