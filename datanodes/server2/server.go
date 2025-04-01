@@ -1,11 +1,14 @@
 package main
 
 import (
+	"bufio"
 	"encoding/gob"
 	"fmt"
 	"net"
 	"os"
 	"strings"
+
+	"github.com/AdityaByte/bytemesh/utils"
 )
 
 type chunkData struct {
@@ -49,37 +52,115 @@ func (s *Server) acceptConnection() {
 	}
 }
 
+
 func handleConnection(conn net.Conn) {
 	defer conn.Close()
-	decoder := gob.NewDecoder(conn)
 
-	var recievedData chunkData
-	err := decoder.Decode(&recievedData)
-
-	fmt.Println("File id", recievedData.FileId)
-	fmt.Println("File name", recievedData.Filename)
-	fmt.Println("File data len", len(recievedData.Data))
-
+	// Firstly we have to check the request type ok
+	reader := bufio.NewReader(conn)
+	requestType, err := reader.ReadString('\n')
+	
 	if err != nil {
-		fmt.Println("Error while decoding data", err)
+		fmt.Println("Failed to fetch the request type: ", err)
 		return
 	}
 
-	err = os.MkdirAll(fmt.Sprintf("storage/%s", strings.Trim(recievedData.Filename, "\n")), os.ModePerm)
+	requestType = strings.TrimSpace(requestType)
+
+	switch(requestType) {
+	case "GET":
+		handleGetRequest(conn, reader)
+	case "POST":
+		handlePostRequest(reader)
+	default:
+		fmt.Println("Request type not found:", requestType)
+		return
+	}
+}
+
+func handleGetRequest(conn net.Conn, reader *bufio.Reader) error {
+
+	
+	filename, err := reader.ReadString('\n')
+	
+	if err != nil {
+		return fmt.Errorf("Failed to read the filename %v", err)
+	}
+	isEmpty := utils.CheckEmptyField(filename)
+
+	
+	if isEmpty {
+		return fmt.Errorf("Filename is empty")
+	}
+	filename = strings.TrimSpace(filename)
+	
+	chunkId, err := reader.ReadString('\n')
 
 	if err != nil {
-		fmt.Println("Error creating directory", err)
-		return
+		return fmt.Errorf("Failed to read chunkid: %v", err)
+	}
+
+	isEmpty = utils.CheckEmptyField(chunkId)
+
+	if isEmpty {
+		return fmt.Errorf("Chunk Id is empty")
+	}
+	chunkId = strings.TrimSpace(chunkId)
+
+	data, err := getBytes(filename, chunkId)
+
+	if err != nil {
+		return err
+	}
+
+	writer := bufio.NewWriter(conn)
+	_, err = writer.Write(data)
+	if err != nil {
+		return fmt.Errorf("Error sending data %v", err)
+	}
+	writer.Flush()
+
+	fmt.Println("Data sent successfully")
+	return nil
+}
+
+func getBytes(filename string, chunkId string) ([]byte, error) {
+	
+	data, err := os.ReadFile(fmt.Sprintf("storage/%s/%s", filename, chunkId))
+	if err != nil {
+		return nil, fmt.Errorf("Failed to read the file: %v", err)
+	}
+
+	return data, nil
+}
+
+func handlePostRequest(reader *bufio.Reader) error {
+	decoder := gob.NewDecoder(reader)
+	var recievedData chunkData
+	if err := decoder.Decode(&recievedData); err != nil {
+		return fmt.Errorf("Failed to decode the data %v", err)
+	}
+	fmt.Println("FileId", recievedData.FileId)
+	fmt.Println("Filename", recievedData.Filename)
+	fmt.Println("Data length:", len(recievedData.Data))
+
+	err := os.MkdirAll(fmt.Sprintf("storage/%s", strings.Trim(recievedData.Filename, "\n")), os.ModePerm)
+
+	if err != nil {
+		return fmt.Errorf("Failed to create directory %v", err) 
 	}
 
 	err = os.WriteFile(fmt.Sprintf("storage/%s/%s", strings.Trim(recievedData.Filename, "\n"), recievedData.FileId), recievedData.Data, 0644)
 
 	if err != nil {
-		fmt.Println("Error saving file", err)
+		return fmt.Errorf("Failed to save the file %v", err)
 	}
 
 	fmt.Println("Chunk data saved successfully")
+
+	return nil
 }
+
 
 func main() {
 
