@@ -51,5 +51,9 @@ func main() {
 		fmt.Println("------------")
 	}
 
+	if err := client.Download("dfs-flowchart.png"); err != nil {
+		fmt.Println(err)
+		return
+	}
 
 }
