@@ -21,9 +21,12 @@ func PushMetaData(ctx context.Context, metadata *model.MetaData, mongoRepo *data
 	return nil
 }
 
-func FetchMetaData(ctx context.Context, filename string, mongoRepo *database.MongoRepository) (*model.MetaData, error) {
+func FetchMetaData(ctx context.Context, filename string, extension string, mongoRepo *database.MongoRepository) (*model.MetaData, error) {
 
-	filter := bson.M{"filename": filename}
+	fmt.Println("File name is :", filename)
+	fmt.Println("File extension is :", extension)
+
+	filter := bson.M{"filename": filename, "fileextension": extension}
 
 	var metaData model.MetaData // Created an instance of metadata for storing it.
 
