@@ -1,18 +1,13 @@
 package client
 
 import (
-	"bufio"
-	"encoding/gob"
+	"bytes"
 	"fmt"
-	"net"
-	"strings"
-)
+	"io"
+	"os"
 
-type metaData struct {
-	Filename      string
-	FileExtension string
-	Location      map[string]string
-}
+	"github.com/AdityaByte/bytemesh/middleware"
+)
 
 // The Download() function takes the name of the file with extension
 // as parameter and sends the request to the namenode server so if the data exists
@@ -22,32 +17,28 @@ type metaData struct {
 const addr = ":9004"
 
 func Download(filename string) error {
-	conn, err := net.Dial("tcp", addr)
+
+	data, err := middleware.GetChunks(filename)
 	if err != nil {
-		return fmt.Errorf("Error occured while creating connection to the namenodeserver", err)
+		return err
 	}
 
-	conn.Write([]byte("GET\n dfs-flowchart.png\n"))
+	fmt.Println("Length of the downloaded data", len(*data))
 
-	reader := bufio.NewReader(conn)
-	statusCode, err := reader.ReadString('\n')
+	file, err := os.Create("download/" + filename)
 
-	statusCode = strings.TrimSpace(statusCode)
-	fmt.Println("Status code is ", statusCode)
-	fmt.Printf("Type of status code %T\n", statusCode)
 	if err != nil {
-		return fmt.Errorf("Error occured at client side:", err)
+		return fmt.Errorf("Error creating file %v", err)
 	}
-	if statusCode == "200" {
-		decoder := gob.NewDecoder(conn)
-		var recievedMetaData *metaData
-		err := decoder.Decode(&recievedMetaData)
 
-		if err != nil {
-			return fmt.Errorf("error:", err)
-		}
+	reader := bytes.NewReader(*data)
 
-		fmt.Println("Recieved meta data:", recievedMetaData)
+	_, err = io.Copy(file, reader)
+	if err != nil {
+		return fmt.Errorf("Failed to create file %v", err)
 	}
+
 	return nil
 }
+
+// flow -> download function -> middleware call -> namenode -> call -> data milenga -> coordinator -> chunks ko lake denga -> chunks -> middleware -> file convert -> pass download function -> file save destination.
