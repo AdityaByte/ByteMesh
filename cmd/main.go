@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/AdityaByte/bytemesh/client"
 	"github.com/AdityaByte/bytemesh/coordinator"
@@ -51,7 +52,7 @@ func main() {
 		fmt.Println("------------")
 	}
 
-	if err := client.Download("dfs-flowchart.png"); err != nil {
+	if err := client.Download(strings.TrimPrefix(filename, "storage/")); err != nil {
 		fmt.Println(err)
 		return
 	}
