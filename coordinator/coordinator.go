@@ -22,7 +22,8 @@ func SendChunks(chunks *[]models.Chunk, filename string) error {
 
 	fmt.Println("original file name :", filename)
 	fileData := strings.Split(filename, ".")
-	name := fileData[0]
+	name := fileData[0] 
+	fmt.Println("Name is ", name)
 	extension := fileData[1]
 
 	connections, err := utils.CreateConnectionPool()
@@ -142,8 +143,17 @@ func sendMetaData(md *models.MetaData) error {
 }
 
 func sendChunkToDataNode(conn net.Conn, chunkData *models.ChunkData) error {
+
+	// Implementing the logic of sending the post request first 
+	writer := bufio.NewWriter(conn)
+	_, err := writer.WriteString("POST" + "\n")
+	if err != nil {
+		return fmt.Errorf("Failed to send the post request to datanode %v", err)
+	}
+	writer.Flush()
+
 	encoder := gob.NewEncoder(conn)
-	err := encoder.Encode(chunkData)
+	err = encoder.Encode(chunkData)
 
 	if err != nil {
 		return fmt.Errorf("error sending chunks to data node", err)
