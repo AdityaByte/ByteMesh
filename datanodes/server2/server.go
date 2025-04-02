@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/gob"
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"strings"
@@ -52,7 +53,6 @@ func (s *Server) acceptConnection() {
 	}
 }
 
-
 func handleConnection(conn net.Conn) {
 	defer conn.Close()
 
@@ -66,10 +66,13 @@ func handleConnection(conn net.Conn) {
 	}
 
 	requestType = strings.TrimSpace(requestType)
+	fmt.Println("Request type is ", requestType)
 
 	switch(requestType) {
 	case "GET":
-		handleGetRequest(conn, reader)
+		if err := handleGetRequest(conn, reader); err != nil {
+			log.Fatalf("%v", err)
+		}
 	case "POST":
 		handlePostRequest(reader)
 	default:
@@ -86,14 +89,17 @@ func handleGetRequest(conn net.Conn, reader *bufio.Reader) error {
 	if err != nil {
 		return fmt.Errorf("Failed to read the filename %v", err)
 	}
-	isEmpty := utils.CheckEmptyField(filename)
 
+	fmt.Println("filename is", filename)
+
+	isEmpty := utils.CheckEmptyField(filename)
 	
 	if isEmpty {
 		return fmt.Errorf("Filename is empty")
 	}
+
 	filename = strings.TrimSpace(filename)
-	
+
 	chunkId, err := reader.ReadString('\n')
 
 	if err != nil {
@@ -105,7 +111,10 @@ func handleGetRequest(conn net.Conn, reader *bufio.Reader) error {
 	if isEmpty {
 		return fmt.Errorf("Chunk Id is empty")
 	}
+
 	chunkId = strings.TrimSpace(chunkId)
+
+	fmt.Println("ChunkId is ", chunkId)
 
 	data, err := getBytes(filename, chunkId)
 
@@ -160,7 +169,6 @@ func handlePostRequest(reader *bufio.Reader) error {
 
 	return nil
 }
-
 
 func main() {
 
