@@ -25,6 +25,8 @@ func decideParts(filesize float64) float64 {
 
 func CreateChunk(file *os.File) (*[]models.Chunk, string, error) {
 
+	fmt.Println("hehehe dude _> " , file.Name())
+
 	fileData, err := os.ReadFile(file.Name())
 
 	if err != nil {
@@ -69,7 +71,7 @@ func CreateChunk(file *os.File) (*[]models.Chunk, string, error) {
 
 	fmt.Println("File name is :", file.Name())
 
-	newString := strings.TrimLeft(file.Name(), "storage/")
+	newString := strings.TrimPrefix(file.Name(), "storage/") 
 
 	fmt.Println("New String is:", newString)
 
