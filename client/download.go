@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"log"
 	"os"
 
 	"github.com/AdityaByte/bytemesh/middleware"
@@ -18,14 +19,16 @@ const addr = ":9004"
 
 func Download(filename string) error {
 
+	log.Println("Filename:", filename)
+
 	data, err := middleware.GetChunks(filename)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println("Length of the downloaded data", len(*data))
+	log.Println("Length of the downloaded data", len(*data))
 
-	file, err := os.Create("download/" + filename)
+	file, err := os.Create("../download/" + filename)
 
 	if err != nil {
 		return fmt.Errorf("Error creating file %v", err)
@@ -40,5 +43,3 @@ func Download(filename string) error {
 
 	return nil
 }
-
-// flow -> download function -> middleware call -> namenode -> call -> data milenga -> coordinator -> chunks ko lake denga -> chunks -> middleware -> file convert -> pass download function -> file save destination.
