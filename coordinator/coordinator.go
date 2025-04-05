@@ -3,9 +3,13 @@ package coordinator
 import (
 	"bufio"
 	"bytes"
+	"encoding/binary"
 	"encoding/gob"
 	"fmt"
+	"io"
+	"log"
 	"net"
+	"sort"
 	"strings"
 
 	"github.com/AdityaByte/bytemesh/models"
@@ -14,16 +18,16 @@ import (
 
 const nameNode = ":9004"
 
-func SendChunks(chunks *[]models.Chunk, filename string) error {
+func SendChunks(chunks *[]models.Chunk, filename string, filesize float64) error {
 
 	if filename == "" {
 		return fmt.Errorf("File name does not exists.")
 	}
 
-	fmt.Println("original file name :", filename)
+	log.Println("Actual file name:", filename)
 	fileData := strings.Split(filename, ".")
-	name := fileData[0] 
-	fmt.Println("Name is ", name)
+	name := fileData[0]
+	log.Println("Prefix:", name)
 	extension := fileData[1]
 
 	connections, err := utils.CreateConnectionPool()
@@ -35,28 +39,22 @@ func SendChunks(chunks *[]models.Chunk, filename string) error {
 		for _, conn := range connections {
 			conn.Close()
 		}
-	} ()
-
-	// nodes := []string{node1, node2, node3}
-
-	// connections := make([]net.Conn, len(nodes))
-
-	// for i, node := range nodes {
-	// 	conn, err := net.Dial("tcp", node)
-	// 	if err != nil {
-	// 		return fmt.Errorf("Failed to connect to %s: %v", node, err)
-	// 	}
-
-	// 	defer conn.Close()
-	// 	connections[i] = conn
-	// }
+	}()
 
 	fileLocation := make(map[string]string)
 
 	// Sending chunks to nodes in round-robin fashion
 	for i, chunk := range *chunks {
+
+		log.Println("Iteration:", i, "ChunkId:", chunk.Id)
+
 		nodeIndex := i % len(utils.Nodes) // It select the node index as per the round robin fashion.
 		conn := connections[nodeIndex]
+		if conn == nil {
+			fmt.Println("connection is null")
+		}
+
+		log.Println("Node index for iteration i:", i, "is", nodeIndex)
 
 		chunkData := models.ChunkData{
 			Filename: name,
@@ -64,11 +62,10 @@ func SendChunks(chunks *[]models.Chunk, filename string) error {
 			Data:     chunk.Data,
 		}
 
-		// err := sendChunkToNode(conn, &chunk, name)
-
 		err := sendChunkToDataNode(conn, &chunkData)
 
 		if err != nil {
+			log.Println("Error occured:", err)
 			continue
 		}
 
@@ -85,6 +82,7 @@ func SendChunks(chunks *[]models.Chunk, filename string) error {
 	metaData := models.MetaData{
 		Filename:      name,
 		FileExtension: extension,
+		ActualSize:    filesize,
 		Location:      fileLocation,
 	}
 
@@ -144,40 +142,36 @@ func sendMetaData(md *models.MetaData) error {
 
 func sendChunkToDataNode(conn net.Conn, chunkData *models.ChunkData) error {
 
-	// Implementing the logic of sending the post request first 
 	writer := bufio.NewWriter(conn)
-	_, err := writer.WriteString("POST" + "\n")
-	if err != nil {
+	reader := bufio.NewReader(conn)
+
+	// Sending POST Request
+	if _, err := writer.WriteString("POST" + "\n"); err != nil {
 		return fmt.Errorf("Failed to send the post request to datanode %v", err)
 	}
-	writer.Flush()
+
+	if err := writer.Flush(); err != nil {
+		return fmt.Errorf("Flush Failed: %v", err)
+	}
 
 	encoder := gob.NewEncoder(conn)
-	err = encoder.Encode(chunkData)
-
-	if err != nil {
-		return fmt.Errorf("error sending chunks to data node", err)
+	if err := encoder.Encode(chunkData); err != nil {
+		return fmt.Errorf("Failed to encode chunk : %v", err)
 	}
 
-	fmt.Println("ChunkId", chunkData.FileId)
-	fmt.Println("ChunkName", chunkData.Filename)
-	fmt.Println("chunkData length", len(chunkData.Data))
+	log.Println("ChunkId", chunkData.FileId)
+	log.Println("ChunkName", chunkData.Filename)
+	log.Println("chunkData length", len(chunkData.Data))
 
-	fmt.Printf("%s sent to the data node server successfully\n", chunkData.FileId)
-	return nil
-}
-
-func sendChunkToNode(conn net.Conn, chunk *models.Chunk, name string) error {
-	_, err := conn.Write([]byte(chunk.Id + "\n"))
+	response, err := reader.ReadString('\n')
 	if err != nil {
-		return fmt.Errorf("Failed to send chunk %s: %v", chunk.Id, err)
-	}
-	_, err = conn.Write(chunk.Data)
-	if err != nil {
-		return fmt.Errorf("Failed to send chunk %s: %v", chunk.Id, err)
+		return fmt.Errorf("Failed to read the response : %v", err)
 	}
 
-	fmt.Printf("Sent chunk %s to node\n", chunk.Id)
+	if strings.TrimSpace(response) != "OK" {
+		return fmt.Errorf("Server error : %s", response)
+	}
+
 	return nil
 }
 
@@ -191,64 +185,110 @@ func FetchChunks(metaData *models.MetaData) (*[]byte, error) {
 
 	location := metaData.Location
 
-	var allData bytes.Buffer
+	var finalData bytes.Buffer
 
+	// Here firstly we need to sort the keys before passing them to the for range loop
+	var keys []string
+	for k := range location {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
 
-	for key, value := range location {
-		// here we get the key which is the chunk1 ok so we derive in which node is being stored so we make a connection to 
-		// the particular node and share out the name of the chunk ok means its id which is the name and we get the data which was we being stored to
-		// the bytes.Buffer and at the very after end we rename the file to the actual name and download it in the downloaded folder.
-	
-		// key -> chunk id
-		// value -> in which node is been stored
+	// Now we passed the sorted keys to it.
+	for _, key := range keys {
+		value := location[key]
 
-		fmt.Println("value is", value)
-		fmt.Println(mappingData[value])
+		log.Println("Key:", key, "Value:", value)
+		log.Println("Chunk stored in:", mappingData[value])
 
 		data, err := getChunkFromNode(metaData.Filename, key, mappingData[value])
 		if err != nil {
 			return nil, err
 		}
 
-		allData.Write(data)
+		finalData.Write(data)
 	}
 
-	sendingData := allData.Bytes()
-	
+	// This is the old code without the sorting logic.
+	// for key, value := range location {
+	// 	// here we get the key which is the chunk1 ok so we derive in which node is being stored so we make a connection to
+	// 	// the particular node and share out the name of the chunk ok means its id which is the name and we get the data which was we being stored to
+	// 	// the bytes.Buffer and at the very after end we rename the file to the actual name and download it in the downloaded folder.
+
+	// 	// key -> chunk id
+	// 	// value -> in which node is been stored
+
+	// 	fmt.Println("value is", value)
+	// 	fmt.Println(mappingData[value])
+
+	// 	data, err := getChunkFromNode(metaData.Filename, key, mappingData[value])
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+
+	// 	finalData.Write(data)
+	// }
+
+	sendingData := finalData.Bytes()
+
 	return &sendingData, nil
 }
 
 // dekh dude apne pass kya hai keys hai aur values hai ok toh us hisab se mai data ko fetch krunga ok...
 // ek for each loop chalayenge apan keys ke liye
 
-// logic 
+// logic
 // map[string]string :::::::::::------------------------------------------------------->
-//  node0 -> chunk1 and node1 -> chunk2 
-// chunk1 -> node0 
-// chunk2 -> node1 
-// chunk3 -> node2 like this so we have to change that all 
+//  node0 -> chunk1 and node1 -> chunk2
+// chunk1 -> node0
+// chunk2 -> node1
+// chunk3 -> node2 like this so we have to change that all
 
 func getChunkFromNode(filename string, chunkId string, nodeAddr string) ([]byte, error) {
 
-	fmt.Println("Node address we are passing is :", nodeAddr)
+	log.Println("Node address we are passing is :", nodeAddr)
 
 	conn, err := net.Dial("tcp", nodeAddr)
-
 	if err != nil {
 		return nil, fmt.Errorf("Failed to connect to %s : %v", nodeAddr, err)
 	}
-
-	writer := bufio.NewWriter(conn)
-	writer.WriteString("GET" + "\n" + filename + "\n" + chunkId + "\n") // We have to manually add the newline character cause in go it doesn't add it automatically.
-	writer.Flush() // For sending data immediately.
+	defer conn.Close()
 
 	reader := bufio.NewReader(conn)
-	data := make([]byte, 30*1024)
-	n, err := reader.Read(data)
+	writer := bufio.NewWriter(conn)
 
+	_, err = writer.WriteString("GET\n" + filename + "\n" + chunkId + "\n") // We have to manually add the newline character cause in go it doesn't add it automatically.
 	if err != nil {
-		return nil, fmt.Errorf("Failed to read data %v", err)
+		return nil, fmt.Errorf("Write Failed: %v", err)
+	}
+	if err := writer.Flush(); err != nil {
+		return nil, fmt.Errorf("Flush Failed: %v", err)
 	}
 
-	return data[:n],nil
+	// reader := bufio.NewReader(conn)
+	// data := make([]byte, 500*1024)
+	// n, err := reader.Read(data)
+
+	// var buf bytes.Buffer
+	// _, err = io.Copy(&buf, conn)
+
+	// Here firstly we have to read the chunksize
+
+	// if err := conn.SetReadDeadline(time.Now().Add(10 * time.Second)); err != nil {
+	// 	return nil, fmt.Errorf("Failed to set the read deadline: %v", err)
+	// }
+
+	var chunkSize uint32
+	if err := binary.Read(reader, binary.BigEndian, &chunkSize); err != nil { // Always read data from reader.
+		return nil, fmt.Errorf("Failed to read the chunk size: %v", err)
+	}
+
+	chunkData := make([]byte, chunkSize)
+	_, err = io.ReadFull(reader, chunkData)
+
+	if err != nil {
+		return nil, fmt.Errorf("Failed to read the chunk data: %v", err)
+	}
+
+	return chunkData, nil
 }
