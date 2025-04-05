@@ -21,6 +21,18 @@ func Upload(filelocation string) (*os.File, error) {
 
 	defer srcFile.Close()
 
+	dirPath := "../storage/"
+	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
+		if err := os.Mkdir(dirPath, os.ModePerm); err != nil {
+			log.Println("Failed to created directory", err)
+			return nil, err
+		} else {
+			log.Println("File created successfully")
+		}
+	} else {
+		log.Println("Directory already exists.")
+	}
+
 	destPath := "../storage/" + utils.Getfilename(srcFile.Name()) // for debuggger
 	// destPath := "storage/" + utils.Getfilename(srcFile.Name())
 	destFile, err := os.Create(destPath)
