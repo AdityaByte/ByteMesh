@@ -20,6 +20,7 @@ storage/
 download/*
 .vscode/
 .git/
+bin/
 
 # Go workspace file
 go.work
