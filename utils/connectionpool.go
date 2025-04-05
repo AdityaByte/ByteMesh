@@ -6,14 +6,12 @@ import (
 )
 
 const (
-	node1    = ":9001"
-	node2    = ":9002"
-	node3    = ":9003"
-	nameNode = ":9004"
+	node1 = ":9001"
+	node2 = ":9002"
+	node3 = ":9003"
 )
 
 var Nodes = []string{node1, node2, node3}
-
 
 func CreateConnectionPool() ([]net.Conn, error) {
 
