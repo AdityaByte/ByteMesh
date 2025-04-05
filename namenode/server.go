@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/gob"
 	"fmt"
+	"log"
 	"namenodeserver/database"
 	"namenodeserver/model"
 	"namenodeserver/service"
@@ -37,18 +38,18 @@ func (s *Server) Start() error {
 
 	defer s.ln.Close()
 
-	fmt.Println("Name node server is listening on", s.listenAddr)
+	log.Println("Name node server is listening on", s.listenAddr)
 
 	s.acceptConnection()
 
 	return nil
-} 
+}
 
 func (s *Server) acceptConnection() {
 	for {
 		conn, err := s.ln.Accept()
 		if err != nil {
-			fmt.Println("Error connecting to client", err)
+			log.Println("Error connecting to client", err)
 			return
 		}
 
@@ -56,21 +57,20 @@ func (s *Server) acceptConnection() {
 	}
 }
 
-
 func handleConnection(conn net.Conn) {
 
 	defer func() {
 		if err := conn.Close(); err != nil {
-			fmt.Println("Error closing the connection %v\n", err)
+			log.Println("Error closing the connection %v\n", err)
 		}
-	} ()
+	}()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancel()
 
 	mongoRepo, err := database.LoadMongoRepository()
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return
 	}
 
@@ -78,30 +78,30 @@ func handleConnection(conn net.Conn) {
 	requestType, err := reader.ReadString('\n')
 
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return
 	}
 
 	requestType = strings.TrimSpace(requestType)
 
 	if requestType == "" {
-		fmt.Println("Request type is not specified..")
+		log.Println("Request Type not found.")
 		return
 	}
 
-	fmt.Println("Requst type:", requestType)
+	fmt.Println("Request type:", requestType)
 
-	switch(requestType) {
+	switch requestType {
 	case "GET":
 		if err := handleGetRequest(ctx, conn, reader, mongoRepo); err != nil {
-			fmt.Println(err)
+			log.Println(err)
 		}
 	case "POST":
 		if err := handlePostRequest(ctx, conn, reader, mongoRepo); err != nil {
-			fmt.Println(err)
+			log.Println(err)
 		}
 	default:
-		fmt.Printf("The particular request %s is not found\n", requestType)
+		log.Printf("Request Type : {%s} not found\n", requestType)
 	}
 
 	// Old code for saving data
@@ -128,24 +128,21 @@ func handleConnection(conn net.Conn) {
 	// }
 }
 
-
 func handleGetRequest(ctx context.Context, conn net.Conn, reader *bufio.Reader, mongoRepo *database.MongoRepository) error {
 	filename, err := reader.ReadString('\n')
 	if err != nil {
-		fmt.Println("Error occured while reading the filename", err)
+		return fmt.Errorf("Error occured while reading the filename: %v", err)
 	}
 	filename = strings.TrimSpace(filename)
 
 	if filename == "" {
-		return fmt.Errorf("Filename is empty")
+		return fmt.Errorf("ERROR: Empty Field - Filename")
 	}
 
-	fmt.Println("Filename is ", filename)
-
 	nameAndExtension := strings.Split(filename, ".")
-	
+
 	name := nameAndExtension[0]
-	extension := nameAndExtension[len(nameAndExtension) - 1]
+	extension := nameAndExtension[len(nameAndExtension)-1]
 
 	metadata, err := service.FetchMetaData(ctx, name, extension, mongoRepo)
 
@@ -168,10 +165,8 @@ func handleGetRequest(ctx context.Context, conn net.Conn, reader *bufio.Reader, 
 	conn.Write([]byte("200\n"))
 
 	encoder := gob.NewEncoder(conn)
-	err = encoder.Encode(metadata)
-
-	if  err != nil {
-		return err
+	if err = encoder.Encode(metadata); err != nil {
+		return fmt.Errorf("Failed to encode the data: %v", err)
 	}
 
 	return nil
@@ -182,7 +177,7 @@ func handlePostRequest(ctx context.Context, conn net.Conn, reader *bufio.Reader,
 	metaData := &model.MetaData{
 		Location: make(map[string]string),
 	}
-	
+
 	decoder := gob.NewDecoder(reader)
 	if err := decoder.Decode(metaData); err != nil {
 		return fmt.Errorf("Error occured while decoding the data %v", err)
@@ -202,8 +197,8 @@ func handlePostRequest(ctx context.Context, conn net.Conn, reader *bufio.Reader,
 }
 
 func init() {
-	if err:=godotenv.Load(); err != nil {
-		fmt.Println("No .env file found.")
+	if err := godotenv.Load(); err != nil {
+		log.Fatalf("No .env file found.")
 	}
 }
 
@@ -211,7 +206,7 @@ func main() {
 	const addr = ":9004"
 	server := NewServer(addr)
 	if err := server.Start(); err != nil {
-		fmt.Println("Server failed to start", err)
+		log.Fatalf("Server failed to start %v", err)
 		os.Exit(1)
 	}
 }
