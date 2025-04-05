@@ -2,7 +2,7 @@ package service
 
 import (
 	"context"
-	"fmt"
+	"log"
 	"namenodeserver/database"
 	"namenodeserver/model"
 
@@ -17,14 +17,13 @@ func PushMetaData(ctx context.Context, metadata *model.MetaData, mongoRepo *data
 		return err
 	}
 
-	fmt.Println("Items inserted to db:", result.InsertedID)
+	log.Println("Items inserted to db:", result.InsertedID)
 	return nil
 }
 
 func FetchMetaData(ctx context.Context, filename string, extension string, mongoRepo *database.MongoRepository) (*model.MetaData, error) {
 
-	fmt.Println("File name is :", filename)
-	fmt.Println("File extension is :", extension)
+	log.Println("FileName:", filename, "Extension:", extension)
 
 	filter := bson.M{"filename": filename, "fileextension": extension}
 
@@ -36,7 +35,7 @@ func FetchMetaData(ctx context.Context, filename string, extension string, mongo
 		return nil, err
 	}
 
-	fmt.Println("Meta data found:", metaData)
+	log.Println("Meta data found:", metaData)
 
 	return &metaData, nil
 }
