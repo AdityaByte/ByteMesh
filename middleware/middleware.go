@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/gob"
 	"fmt"
+	"log"
 	"math"
 	"net"
 	"os"
@@ -15,22 +16,21 @@ import (
 	"github.com/AdityaByte/bytemesh/models"
 )
 
-const nameNode = ":9004"
-
-var sizeOfChunk float64 = 30 // In kb
+const (
+	sizeOfChunk = 500 // In KB
+	nameNode    = ":9004"
+)
 
 func decideParts(filesize float64) float64 {
 	return math.Ceil(filesize / sizeOfChunk)
 }
 
-func CreateChunk(file *os.File) (*[]models.Chunk, string, error) {
-
-	fmt.Println("hehehe dude _> " , file.Name())
+func CreateChunk(file *os.File) (*[]models.Chunk, string, float64, error) {
 
 	fileData, err := os.ReadFile(file.Name())
 
 	if err != nil {
-		return nil, "", err
+		return nil, "", 0, err
 	}
 
 	fmt.Println("original file size:", len(fileData))
@@ -53,6 +53,8 @@ func CreateChunk(file *os.File) (*[]models.Chunk, string, error) {
 
 	for i := 0; i < int(parts); i++ {
 
+		log.Println("Iteration", i, "First:", first, "Last:", last, "FileData size:", len(fileData))
+
 		if last > len(fileData) {
 			last = len(fileData)
 		}
@@ -71,11 +73,15 @@ func CreateChunk(file *os.File) (*[]models.Chunk, string, error) {
 
 	fmt.Println("File name is :", file.Name())
 
-	newString := strings.TrimPrefix(file.Name(), "storage/") 
+	if strings.Contains(file.Name(), "../storage") {
+		newString := strings.TrimPrefix(file.Name(), "../storage/")
+		log.Println("New String is:", newString)
+		return &chunks, newString, fileSizeInKb, nil
+	}
 
-	fmt.Println("New String is:", newString)
-
-	return &chunks, newString, nil
+	newString := strings.TrimPrefix(file.Name(), "storage/")
+	log.Println("New String is:", newString)
+	return &chunks, newString, fileSizeInKb, nil
 }
 
 func GetChunks(filename string) (*[]byte, error) {
@@ -94,7 +100,7 @@ func GetChunks(filename string) (*[]byte, error) {
 	if filename == "" {
 		return nil, fmt.Errorf("File name is empty")
 	}
-	
+
 	writer := bufio.NewWriter(conn)
 	writer.WriteString("GET\n" + filename + "\n")
 	writer.Flush()
