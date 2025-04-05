@@ -38,7 +38,7 @@ func (s *Server) Start() error {
 	}
 	s.listener = listener
 	defer s.listener.Close()
-	log.Println("Data node server 1 is listening on:", s.listenAddr)
+	log.Println("Data Node 3 is listening on:", s.listenAddr)
 	s.acceptConnection()
 
 	return nil

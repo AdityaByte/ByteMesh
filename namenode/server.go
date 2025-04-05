@@ -38,7 +38,7 @@ func (s *Server) Start() error {
 
 	defer s.ln.Close()
 
-	log.Println("Name node server is listening on", s.listenAddr)
+	log.Println("Name Node is listening on", s.listenAddr)
 
 	s.acceptConnection()
 
