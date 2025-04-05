@@ -2,8 +2,10 @@ package main
 
 import (
 	"bufio"
+	"encoding/binary"
 	"encoding/gob"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"os"
@@ -36,7 +38,7 @@ func (s *Server) Start() error {
 	}
 	s.listener = listener
 	defer s.listener.Close()
-	fmt.Println("Data node server 1 is listening on ", s.listenAddr)
+	log.Println("Data node server 1 is listening on:", s.listenAddr)
 	s.acceptConnection()
 
 	return nil
@@ -46,7 +48,7 @@ func (s *Server) acceptConnection() {
 	for {
 		conn, err := s.listener.Accept()
 		if err != nil {
-			fmt.Println("Connection error:", err)
+			log.Println("Connection error:", err)
 			continue
 		}
 		go handleConnection(conn)
@@ -56,41 +58,51 @@ func (s *Server) acceptConnection() {
 func handleConnection(conn net.Conn) {
 	defer conn.Close()
 
-	// Firstly we have to check the request type ok
 	reader := bufio.NewReader(conn)
-	requestType, err := reader.ReadString('\n')
+	writer := bufio.NewWriter(conn)
+
+	for {
+		requestType, err := reader.ReadString('\n')
 	
-	if err != nil {
-		fmt.Println("Failed to fetch the request type: ", err)
-		return
-	}
-
-	requestType = strings.TrimSpace(requestType)
-	fmt.Println("Request type is ", requestType)
-
-	switch(requestType) {
-	case "GET":
-		if err := handleGetRequest(conn, reader); err != nil {
-			log.Fatalf("%v", err)
+		if err != nil {
+			if err == io.EOF {
+				log.Println("Client Disconnected")
+				return
+			}
+			log.Fatalf("Failed to fetch the request type: %v", err)
+			return
 		}
-	case "POST":
-		handlePostRequest(reader)
-	default:
-		fmt.Println("Request type not found:", requestType)
-		return
+
+		requestType = strings.TrimSpace(requestType)
+		log.Println("Request type:", requestType)
+
+		switch requestType {
+		case "GET":
+			if err := handleGetRequest(conn, reader, writer); err != nil {
+				log.Fatalf("GET Failed: %v", err)
+			}
+		case "POST":
+			if err := handlePostRequest(reader, writer); err != nil {
+				log.Fatalf("POST Failed: %v", err)
+			}
+		default:
+			writer.WriteString("Error: Invalid Request\n")
+			writer.Flush()
+			return
+		}
+
 	}
 }
 
-func handleGetRequest(conn net.Conn, reader *bufio.Reader) error {
+func handleGetRequest(conn net.Conn, reader *bufio.Reader, writer *bufio.Writer) error {
 
-	
 	filename, err := reader.ReadString('\n')
 	
 	if err != nil {
 		return fmt.Errorf("Failed to read the filename %v", err)
 	}
 
-	fmt.Println("filename is", filename)
+	log.Println("filename is", filename)
 
 	isEmpty := utils.CheckEmptyField(filename)
 	
@@ -114,7 +126,7 @@ func handleGetRequest(conn net.Conn, reader *bufio.Reader) error {
 
 	chunkId = strings.TrimSpace(chunkId)
 
-	fmt.Println("ChunkId is ", chunkId)
+	log.Println("ChunkId is ", chunkId)
 
 	data, err := getBytes(filename, chunkId)
 
@@ -122,14 +134,24 @@ func handleGetRequest(conn net.Conn, reader *bufio.Reader) error {
 		return err
 	}
 
-	writer := bufio.NewWriter(conn)
-	_, err = writer.Write(data)
+	// I am going to do a small change here like using the length prefixed protocol 
+	// firstly we are sending the size of the chunk so that the client must read all the data as per the size.
+
+	chunkSize := uint32(len(data))
+	if err := binary.Write(writer, binary.BigEndian, chunkSize); err != nil {
+		return fmt.Errorf("Failed to send the chunk size: %v", err)
+	}
+
+	nn, err := writer.Write(data)
 	if err != nil {
 		return fmt.Errorf("Error sending data %v", err)
 	}
-	writer.Flush()
+	if err := writer.Flush(); err != nil {
+		return fmt.Errorf("Failed to Flush out the data: %v", err)
+	}
 
-	fmt.Println("Data sent successfully")
+	log.Println("Length of the data:", nn)
+	log.Println("Data sent successfully")
 	return nil
 }
 
@@ -143,30 +165,41 @@ func getBytes(filename string, chunkId string) ([]byte, error) {
 	return data, nil
 }
 
-func handlePostRequest(reader *bufio.Reader) error {
+func handlePostRequest(reader *bufio.Reader, writer *bufio.Writer) error {
 	decoder := gob.NewDecoder(reader)
 	var recievedData chunkData
 	if err := decoder.Decode(&recievedData); err != nil {
-		return fmt.Errorf("Failed to decode the data %v", err)
-	}
-	fmt.Println("FileId", recievedData.FileId)
-	fmt.Println("Filename", recievedData.Filename)
-	fmt.Println("Data length:", len(recievedData.Data))
-
-	err := os.MkdirAll(fmt.Sprintf("storage/%s", strings.Trim(recievedData.Filename, "\n")), os.ModePerm)
-
-	if err != nil {
-		return fmt.Errorf("Failed to create directory %v", err) 
+		writer.WriteString("ERROR: Failed to Decode Data\n")
+		writer.Flush()
+		return err
 	}
 
-	err = os.WriteFile(fmt.Sprintf("storage/%s/%s", strings.Trim(recievedData.Filename, "\n"), recievedData.FileId), recievedData.Data, 0644)
+	log.Printf("Saving chunk %s, Size %d bytes", recievedData.FileId, len(recievedData.Data))
 
-	if err != nil {
-		return fmt.Errorf("Failed to save the file %v", err)
+	tempPath := fmt.Sprintf("storage/%s/%s.tmp", recievedData.Filename, recievedData.FileId)
+	finalPath := fmt.Sprintf("storage/%s/%s", recievedData.Filename, recievedData.FileId)
+
+	if err := os.MkdirAll(fmt.Sprintf("storage/%s", strings.Trim(recievedData.Filename, "\n")), os.ModePerm); err != nil {
+		writer.WriteString("ERROR: Failed to create directory\n")
+		writer.Flush()
+		return err
 	}
 
-	fmt.Println("Chunk data saved successfully")
+	if err := os.WriteFile(tempPath, recievedData.Data, 0644); err != nil {
+		writer.WriteString("ERROR: Failed to write the chunk\n")
+		writer.Flush()
+		return err
+	}
 
+	// If everything goes right at last we have to rename it to the finalPath name
+	if err := os.Rename(tempPath, finalPath); err != nil {
+		writer.WriteString("Failed to commit the chunk\n")
+		writer.Flush()
+		return err
+	}
+
+	writer.WriteString("OK\n")
+	writer.Flush()
 	return nil
 }
 
