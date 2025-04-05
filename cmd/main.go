@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/AdityaByte/bytemesh/client"
 	"github.com/AdityaByte/bytemesh/coordinator"
@@ -59,6 +60,10 @@ func main() {
 
 		if err := coordinator.SendChunks(chunks, filename, filesize); err != nil {
 			log.Fatalf("%v", err)
+		}
+
+		if err := os.Remove(fmt.Sprintf("../storage/%s", filename)); err != nil {
+			log.Println("Failed to remove the file from the storage folder:", err)
 		}
 	}
 
