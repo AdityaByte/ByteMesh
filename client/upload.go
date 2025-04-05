@@ -3,12 +3,16 @@ package client
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
 
 	"github.com/AdityaByte/bytemesh/utils"
 )
 
 func Upload(filelocation string) (*os.File, error) {
+
+	log.Println("File Location :", filelocation)
+
 	srcFile, err := os.Open(filelocation)
 
 	if err != nil {
@@ -17,8 +21,8 @@ func Upload(filelocation string) (*os.File, error) {
 
 	defer srcFile.Close()
 
-	// destPath := "../storage/" + utils.Getfilename(srcFile.Name()) // for debuggger
-	destPath := "storage/" + utils.Getfilename(srcFile.Name()) 
+	destPath := "../storage/" + utils.Getfilename(srcFile.Name()) // for debuggger
+	// destPath := "storage/" + utils.Getfilename(srcFile.Name())
 	destFile, err := os.Create(destPath)
 
 	if err != nil {
