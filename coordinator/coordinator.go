@@ -18,6 +18,8 @@ import (
 
 const nameNode = ":9004"
 
+
+
 func SendChunks(chunks *[]models.Chunk, filename string, filesize float64) error {
 
 	if filename == "" {
@@ -29,6 +31,25 @@ func SendChunks(chunks *[]models.Chunk, filename string, filesize float64) error
 	name := fileData[0]
 	log.Println("Prefix:", name)
 	extension := fileData[1]
+
+	// Before creating the connection we have to check the health
+	// of the Datanodes and the Namenodes so that all are working correctly or not.
+
+	errors := HealthChecker([]string{
+		":9001",
+		":9002",
+		":9003",
+		":9004",
+	})
+
+	if len(errors) > 0 {
+		for _, err := range errors {
+			log.Println(err)
+		}
+		return fmt.Errorf("Something goes wrong one or more nodes are unhealthy.")
+	} else {
+		log.Println("All Nodes are healthy")
+	}
 
 	connections, err := utils.CreateConnectionPool()
 	if err != nil {
