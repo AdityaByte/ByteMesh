@@ -67,5 +67,3 @@ func HealthChecker(addrs []string) []error {
 
 	return errors
 }
-
-// I am just thinking about how we check the health ok this function runs in background and
