@@ -6,11 +6,11 @@ import (
 	"encoding/gob"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"os"
 	"strings"
 
+	"github.com/AdityaByte/bytemesh/datanodes/server1/logger"
 	"github.com/AdityaByte/bytemesh/utils"
 )
 
@@ -38,7 +38,7 @@ func (s *Server) Start() error {
 	}
 	s.listener = listener
 	defer s.listener.Close()
-	log.Println("Data Node 1 is listening on:", s.listenAddr)
+	logger.InfoLogger.Println("Data Node 1 is listening on:", s.listenAddr)
 	s.acceptConnection()
 
 	return nil
@@ -48,7 +48,7 @@ func (s *Server) acceptConnection() {
 	for {
 		conn, err := s.listener.Accept()
 		if err != nil {
-			log.Println("Connection error:", err)
+			logger.ErrorLogger.Println("Connection error:", err)
 			continue
 		}
 		go handleConnection(conn)
@@ -56,14 +56,14 @@ func (s *Server) acceptConnection() {
 }
 
 // In the handleConnection we firslty we have to define a proper schema that in which form is the request
-// is been sent -> Request is been of two types 
+// is been sent -> Request is been of two types
 // 1.Get Request -> for getting out some resources from the server
 // 2.Post Request -> This one is for pushing out some resources to the server.
 
 /*
 1. For Post request
 Request Type - POST
-Headers  -> file name and other things 
+Headers  -> file name and other things
 Body - actual data
 
 2. For Get request
@@ -79,32 +79,32 @@ func handleConnection(conn net.Conn) {
 
 	for {
 		requestType, err := reader.ReadString('\n')
-	
+
 		if err != nil {
 			if err == io.EOF {
-				log.Println("Client Disconnected")
+				logger.InfoLogger.Println("Client Disconnected")
 				return
 			}
-			log.Fatalf("Failed to fetch the request type: %v", err)
+			logger.ErrorLogger.Println("Failed to fetch the request type: %v", err)
 			return
 		}
 
 		requestType = strings.TrimSpace(requestType)
-		log.Println("Request type:", requestType)
+		logger.InfoLogger.Println("Request type:", requestType)
 
 		switch requestType {
 		case "GET":
 			if err := handleGetRequest(reader, writer); err != nil {
-				log.Fatalf("GET Failed: %v", err)
+				logger.ErrorLogger.Println("GET Failed: %v", err)
 			}
 		case "POST":
 			if err := handlePostRequest(reader, writer); err != nil {
-				log.Fatalf("POST Failed: %v", err)
+				logger.ErrorLogger.Println("POST Failed: %v", err)
 			}
 		case "HEALTH":
-			log.Println("Handling health check..")
+			logger.InfoLogger.Println("Handling health check..")
 			if err := Health(conn, reader, writer); err != nil {
-				log.Fatalf("ERROR: %v\n", err)
+				logger.ErrorLogger.Println("ERROR: %v\n", err)
 			}
 		default:
 			writer.WriteString("Error: Invalid Request\n")
@@ -167,15 +167,15 @@ func handleConnection(conn net.Conn) {
 func handleGetRequest(reader *bufio.Reader, writer *bufio.Writer) error {
 
 	filename, err := reader.ReadString('\n')
-	
+
 	if err != nil {
 		return fmt.Errorf("ERROR: Failed to read the filename %v", err)
 	}
 
-	log.Println("filename is", filename)
+	logger.InfoLogger.Println("Filename:", filename)
 
 	isEmpty := utils.CheckEmptyField(filename)
-	
+
 	if isEmpty {
 		return fmt.Errorf("ERROR: Filename is empty")
 	}
@@ -196,7 +196,7 @@ func handleGetRequest(reader *bufio.Reader, writer *bufio.Writer) error {
 
 	chunkId = strings.TrimSpace(chunkId)
 
-	log.Println("ChunkId is ", chunkId)
+	logger.InfoLogger.Println("ChunkId is ", chunkId)
 
 	data, err := getBytes(filename, chunkId)
 
@@ -204,7 +204,7 @@ func handleGetRequest(reader *bufio.Reader, writer *bufio.Writer) error {
 		return err
 	}
 
-	// I am going to do a small change here like using the length prefixed protocol 
+	// I am going to do a small change here like using the length prefixed protocol
 	// firstly we are sending the size of the chunk so that the client must read all the data as per the size.
 
 	chunkSize := uint32(len(data))
@@ -220,13 +220,13 @@ func handleGetRequest(reader *bufio.Reader, writer *bufio.Writer) error {
 		return fmt.Errorf("ERROR: Failed to Flush out the data: %v", err)
 	}
 
-	log.Println("Length of the data:", nn)
-	log.Println("Data sent successfully")
+	logger.InfoLogger.Println("Length of the data:", nn)
+	logger.InfoLogger.Println("Data sent successfully")
 	return nil
 }
 
 func getBytes(filename string, chunkId string) ([]byte, error) {
-	
+
 	data, err := os.ReadFile(fmt.Sprintf("storage/%s/%s", filename, chunkId))
 	if err != nil {
 		return nil, fmt.Errorf("ERROR: Failed to read the file: %v", err)
@@ -244,7 +244,7 @@ func handlePostRequest(reader *bufio.Reader, writer *bufio.Writer) error {
 		return err
 	}
 
-	log.Printf("Saving chunk %s, Size %d bytes", recievedData.FileId, len(recievedData.Data))
+	logger.InfoLogger.Printf("Saving chunk %s, Size %d bytes", recievedData.FileId, len(recievedData.Data))
 
 	tempPath := fmt.Sprintf("storage/%s/%s.tmp", recievedData.Filename, recievedData.FileId)
 	finalPath := fmt.Sprintf("storage/%s/%s", recievedData.Filename, recievedData.FileId)
@@ -323,7 +323,7 @@ func main() {
 
 	server := NewServer(listenAddr)
 	if err := server.Start(); err != nil {
-		fmt.Println("Server failed to start", err)
+		logger.ErrorLogger.Fatalf("Server failed to start %v", err)
 		os.Exit(1)
 	}
 }

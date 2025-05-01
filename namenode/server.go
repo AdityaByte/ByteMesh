@@ -8,6 +8,7 @@ import (
 	"log"
 	"namenodeserver/database"
 	"namenodeserver/health"
+	"namenodeserver/logger"
 	"namenodeserver/model"
 	"namenodeserver/service"
 	"net"
@@ -39,7 +40,7 @@ func (s *Server) Start() error {
 
 	defer s.ln.Close()
 
-	log.Println("Name Node is listening on", s.listenAddr)
+	logger.InfoLogger.Println("Name Node is listening on", s.listenAddr)
 
 	s.acceptConnection()
 
@@ -50,7 +51,7 @@ func (s *Server) acceptConnection() {
 	for {
 		conn, err := s.ln.Accept()
 		if err != nil {
-			log.Println("Error connecting to client", err)
+			logger.ErrorLogger.Println("Error connecting to client", err)
 			return
 		}
 
@@ -65,7 +66,7 @@ func handleConnection(conn net.Conn) {
 
 	defer func() {
 		if err := conn.Close(); err != nil {
-			log.Println("Error closing the connection %v\n", err)
+			logger.ErrorLogger.Println("Failed to close connection %v\n", err)
 		}
 	}()
 
@@ -74,7 +75,7 @@ func handleConnection(conn net.Conn) {
 
 	mongoRepo, err := database.LoadMongoRepository()
 	if err != nil {
-		log.Println(err)
+		logger.ErrorLogger.Println(err)
 		return
 	}
 
@@ -82,14 +83,14 @@ func handleConnection(conn net.Conn) {
 	requestType, err := reader.ReadString('\n')
 
 	if err != nil {
-		log.Println(err)
+		logger.ErrorLogger.Println(err)
 		return
 	}
 
 	requestType = strings.TrimSpace(requestType)
 
 	if requestType == "" {
-		log.Println("Request Type not found.")
+		logger.ErrorLogger.Println("Request Type not found.")
 		return
 	}
 
@@ -98,18 +99,18 @@ func handleConnection(conn net.Conn) {
 	switch requestType {
 	case "GET":
 		if err := handleGetRequest(ctx, conn, reader, mongoRepo); err != nil {
-			log.Println(err)
+			logger.ErrorLogger.Println(err)
 		}
 	case "POST":
 		if err := handlePostRequest(ctx, conn, reader, mongoRepo); err != nil {
-			log.Println(err)
+			logger.ErrorLogger.Println(err)
 		}
 	case "HEALTH":
 		if err := health.Health(conn, reader); err != nil {
-			log.Println(err)
+			logger.ErrorLogger.Println(err)
 		}
 	default:
-		log.Printf("Request Type : {%s} not found\n", requestType)
+		logger.ErrorLogger.Printf("Request Type : {%s} not found\n", requestType)
 	}
 
 	// Old code for saving data
@@ -214,7 +215,7 @@ func main() {
 	const addr = ":9004"
 	server := NewServer(addr)
 	if err := server.Start(); err != nil {
-		log.Fatalf("Server failed to start %v", err)
+		logger.ErrorLogger.Fatalf("Server failed to start %v", err)
 		os.Exit(1)
 	}
 }

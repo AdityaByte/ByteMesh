@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"encoding/gob"
 	"fmt"
-	"log"
 	"math"
 	"net"
 	"os"
@@ -13,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/AdityaByte/bytemesh/coordinator"
+	"github.com/AdityaByte/bytemesh/logger"
 	"github.com/AdityaByte/bytemesh/models"
 )
 
@@ -33,16 +33,15 @@ func CreateChunk(file *os.File) (*[]models.Chunk, string, float64, error) {
 		return nil, "", 0, err
 	}
 
-	fmt.Println("original file size:", len(fileData))
-	fmt.Println(len(fileData))
+	logger.InfoLogger.Println("original file size:", len(fileData))
 	originalFileSize := float64(len(fileData))
 	fileSizeInKb := originalFileSize / 1024
 
-	fmt.Println("File size:", fileSizeInKb)
+	logger.InfoLogger.Println("File size in kb:", fileSizeInKb)
 
 	parts := decideParts(float64(fileSizeInKb))
 
-	fmt.Println("parts:", parts)
+	logger.InfoLogger.Println("parts:", parts)
 
 	var chunks []models.Chunk
 
@@ -53,7 +52,7 @@ func CreateChunk(file *os.File) (*[]models.Chunk, string, float64, error) {
 
 	for i := 0; i < int(parts); i++ {
 
-		log.Println("Iteration", i, "First:", first, "Last:", last, "FileData size:", len(fileData))
+		logger.InfoLogger.Println("Iteration", i, "First:", first, "Last:", last, "FileData size:", len(fileData))
 
 		if last > len(fileData) {
 			last = len(fileData)
@@ -71,16 +70,16 @@ func CreateChunk(file *os.File) (*[]models.Chunk, string, float64, error) {
 		})
 	}
 
-	fmt.Println("File name is :", file.Name())
+	logger.InfoLogger.Println("File name is :", file.Name())
 
 	if strings.Contains(file.Name(), "../storage") {
 		newString := strings.TrimPrefix(file.Name(), "../storage/")
-		log.Println("New String is:", newString)
+		logger.InfoLogger.Println("New String is:", newString)
 		return &chunks, newString, fileSizeInKb, nil
 	}
 
 	newString := strings.TrimPrefix(file.Name(), "storage/")
-	log.Println("New String is:", newString)
+	logger.InfoLogger.Println("New String is:", newString)
 	return &chunks, newString, fileSizeInKb, nil
 }
 
@@ -88,7 +87,7 @@ func GetChunks(filename string) (*[]byte, error) {
 	conn, err := net.Dial("tcp", nameNode)
 	defer func() {
 		if err := conn.Close(); err != nil {
-			fmt.Println("Error occured while closing the connection..", err)
+			logger.ErrorLogger.Println("Failed to close connection", err)
 		}
 	}()
 
@@ -98,12 +97,17 @@ func GetChunks(filename string) (*[]byte, error) {
 
 	filename = strings.TrimSpace(filename)
 	if filename == "" {
-		return nil, fmt.Errorf("File name is empty")
+		return nil, fmt.Errorf("Empty filename")
 	}
 
 	writer := bufio.NewWriter(conn)
-	writer.WriteString("GET\n" + filename + "\n")
-	writer.Flush()
+	if _, err := writer.WriteString("GET\n" + filename + "\n"); err != nil {
+		return nil, fmt.Errorf("Failed to send the request:", err)
+	}
+
+	if err = writer.Flush(); err != nil {
+		return nil, fmt.Errorf("Flush Failed")
+	}
 
 	reader := bufio.NewReader(conn)
 	response, err := reader.ReadString('\n')
@@ -112,7 +116,7 @@ func GetChunks(filename string) (*[]byte, error) {
 	}
 
 	response = strings.TrimSpace(response)
-	fmt.Println("The response we are getting is ", response)
+	logger.InfoLogger.Println("The response we are getting is ", response)
 
 	if response != "200" {
 		return nil, fmt.Errorf("Response is not OK", response)
@@ -126,7 +130,7 @@ func GetChunks(filename string) (*[]byte, error) {
 		return nil, fmt.Errorf("Error occured while decoding the data", err)
 	}
 
-	fmt.Println("metadata is :", recievedData)
+	logger.InfoLogger.Println("metadata is :", recievedData)
 
 	if reflect.DeepEqual(recievedData, models.MetaData{}) {
 		return nil, fmt.Errorf("No file found at the server...")

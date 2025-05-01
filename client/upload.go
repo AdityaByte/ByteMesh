@@ -3,20 +3,20 @@ package client
 import (
 	"fmt"
 	"io"
-	"log"
 	"os"
 
+	"github.com/AdityaByte/bytemesh/logger"
 	"github.com/AdityaByte/bytemesh/utils"
 )
 
 func Upload(filelocation string) (*os.File, error) {
 
-	log.Println("File Location :", filelocation)
+	logger.InfoLogger.Println("File Location :", filelocation)
 
 	srcFile, err := os.Open(filelocation)
 
 	if err != nil {
-		return nil, fmt.Errorf("Error in opening the file")
+		return nil, fmt.Errorf("Failed to open file")
 	}
 
 	defer srcFile.Close()
@@ -24,13 +24,13 @@ func Upload(filelocation string) (*os.File, error) {
 	dirPath := "../storage/"
 	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
 		if err := os.Mkdir(dirPath, os.ModePerm); err != nil {
-			log.Println("Failed to created directory", err)
+			logger.ErrorLogger.Println("Failed to created directory", err)
 			return nil, err
 		} else {
-			log.Println("File created successfully")
+			logger.InfoLogger.Println("File created successfully")
 		}
 	} else {
-		log.Println("Directory already exists.")
+		logger.InfoLogger.Println("Directory already exists.")
 	}
 
 	destPath := "../storage/" + utils.Getfilename(srcFile.Name()) // for debuggger
@@ -38,7 +38,7 @@ func Upload(filelocation string) (*os.File, error) {
 	destFile, err := os.Create(destPath)
 
 	if err != nil {
-		return nil, fmt.Errorf("Error in creating the file at the destination path %w", err)
+		return nil, fmt.Errorf("Failed to create file at the desired location %w", err)
 	}
 
 	defer destFile.Close()
@@ -46,7 +46,7 @@ func Upload(filelocation string) (*os.File, error) {
 	_, err = io.Copy(destFile, srcFile)
 
 	if err != nil {
-		return nil, fmt.Errorf("Error while copying file")
+		return nil, fmt.Errorf("Failed to copy file")
 	}
 
 	return destFile, nil

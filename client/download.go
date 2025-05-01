@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"log"
 	"os"
 
+	"github.com/AdityaByte/bytemesh/logger"
 	"github.com/AdityaByte/bytemesh/middleware"
 )
 
@@ -19,23 +19,23 @@ const addr = ":9004"
 
 func Download(filename string) error {
 
-	log.Println("Filename:", filename)
+	logger.InfoLogger.Println("Filename:", filename)
 
 	data, err := middleware.GetChunks(filename)
 	if err != nil {
 		return err
 	}
 
-	log.Println("Length of the downloaded data", len(*data))
+	logger.InfoLogger.Println("Downloaded Data length:", len(*data))
 
 	if _, err = os.Stat("../download/"); os.IsNotExist(err) {
 		if err := os.Mkdir("../download/", os.ModePerm); err != nil {
-			log.Println("Failed to create the download directory:", err)
+			logger.ErrorLogger.Println("Failed to create the download directory:", err)
 		} else {
-			log.Println("Download Directory created successfully.")
+			logger.InfoLogger.Println("Download Directory created successfully.")
 		}
 	} else {
-		log.Println("Download Directory already exists.")
+		logger.InfoLogger.Println("Download Directory already exists.")
 	}
 
 	file, err := os.Create("../download/" + filename)
