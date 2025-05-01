@@ -34,9 +34,12 @@ func HealthChecker(addrs []string) []error {
 				return
 			}
 			defer conn.Close()
+			
 			writer := bufio.NewWriter(conn)
 			reader := bufio.NewReader(conn)
-			writer.WriteString("HEALTH")
+			if _, err = writer.WriteString("HEALTH\n"); err != nil {
+				errorChan <- fmt.Errorf("%v", err)
+			}
 			if err := writer.Flush(); err != nil {
 				errorChan <- fmt.Errorf("ERROR: Failed to flush to  %s", addr)
 				return
