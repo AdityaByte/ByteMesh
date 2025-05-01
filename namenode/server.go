@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"namenodeserver/database"
+	"namenodeserver/health"
 	"namenodeserver/model"
 	"namenodeserver/service"
 	"net"
@@ -59,6 +60,9 @@ func (s *Server) acceptConnection() {
 
 func handleConnection(conn net.Conn) {
 
+	// Firstly of all we have to sent the OK response to the coordinator
+	// for telling that everything goes right to the server.
+
 	defer func() {
 		if err := conn.Close(); err != nil {
 			log.Println("Error closing the connection %v\n", err)
@@ -98,6 +102,10 @@ func handleConnection(conn net.Conn) {
 		}
 	case "POST":
 		if err := handlePostRequest(ctx, conn, reader, mongoRepo); err != nil {
+			log.Println(err)
+		}
+	case "HEALTH":
+		if err := health.Health(conn, reader); err != nil {
 			log.Println(err)
 		}
 	default:
