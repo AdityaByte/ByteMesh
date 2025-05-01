@@ -2,8 +2,8 @@ package service
 
 import (
 	"context"
-	"log"
 	"namenodeserver/database"
+	"namenodeserver/logger"
 	"namenodeserver/model"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -17,13 +17,13 @@ func PushMetaData(ctx context.Context, metadata *model.MetaData, mongoRepo *data
 		return err
 	}
 
-	log.Println("Items inserted to db:", result.InsertedID)
+	logger.InfoLogger.Println("Items inserted to db:", result.InsertedID)
 	return nil
 }
 
 func FetchMetaData(ctx context.Context, filename string, extension string, mongoRepo *database.MongoRepository) (*model.MetaData, error) {
 
-	log.Println("FileName:", filename, "Extension:", extension)
+	logger.InfoLogger.Println("FileName:", filename, "Extension:", extension)
 
 	filter := bson.M{"filename": filename, "fileextension": extension}
 
@@ -35,7 +35,7 @@ func FetchMetaData(ctx context.Context, filename string, extension string, mongo
 		return nil, err
 	}
 
-	log.Println("Meta data found:", metaData)
+	logger.InfoLogger.Println("Meta data found:", metaData)
 
 	return &metaData, nil
 }

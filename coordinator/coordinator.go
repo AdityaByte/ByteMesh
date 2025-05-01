@@ -7,11 +7,11 @@ import (
 	"encoding/gob"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"sort"
 	"strings"
 
+	"github.com/AdityaByte/bytemesh/logger"
 	"github.com/AdityaByte/bytemesh/models"
 	"github.com/AdityaByte/bytemesh/utils"
 )
@@ -24,10 +24,10 @@ func SendChunks(chunks *[]models.Chunk, filename string, filesize float64) error
 		return fmt.Errorf("File name does not exists.")
 	}
 
-	log.Println("Actual file name:", filename)
+	logger.InfoLogger.Println("Actual file name:", filename)
 	fileData := strings.Split(filename, ".")
 	name := fileData[0]
-	log.Println("Prefix:", name)
+	logger.InfoLogger.Println("Prefix:", name)
 	extension := fileData[1]
 
 	// Before creating the connection we have to check the health
@@ -42,11 +42,11 @@ func SendChunks(chunks *[]models.Chunk, filename string, filesize float64) error
 
 	if len(errors) > 0 {
 		for _, err := range errors {
-			log.Println(err)
+			logger.ErrorLogger.Println(err)
 		}
 		return fmt.Errorf("Something goes wrong one or more nodes are unhealthy.")
 	} else {
-		log.Println("All Nodes are healthy")
+		logger.InfoLogger.Println("All Nodes are healthy")
 	}
 
 	connections, err := utils.CreateConnectionPool()
@@ -65,15 +65,15 @@ func SendChunks(chunks *[]models.Chunk, filename string, filesize float64) error
 	// Sending chunks to nodes in round-robin fashion
 	for i, chunk := range *chunks {
 
-		log.Println("Iteration:", i, "ChunkId:", chunk.Id)
+		logger.InfoLogger.Println("Iteration:", i, "ChunkId:", chunk.Id)
 
 		nodeIndex := i % len(utils.Nodes) // It select the node index as per the round robin fashion.
 		conn := connections[nodeIndex]
 		if conn == nil {
-			fmt.Println("connection is null")
+			logger.InfoLogger.Println("Nil Connection")
 		}
 
-		log.Println("Node index for iteration i:", i, "is", nodeIndex)
+		logger.InfoLogger.Println("Node index for iteration i:", i, "is", nodeIndex)
 
 		chunkData := models.ChunkData{
 			Filename: name,
@@ -84,12 +84,12 @@ func SendChunks(chunks *[]models.Chunk, filename string, filesize float64) error
 		err := sendChunkToDataNode(conn, &chunkData)
 
 		if err != nil {
-			log.Println("Error occured:", err)
+			logger.ErrorLogger.Println(err)
 			continue
 		}
 
 		if err != nil {
-			return fmt.Errorf("error sending chunk %s to node %s: %v", chunk.Id, utils.Nodes[nodeIndex], err)
+			return fmt.Errorf("Failed to send chunk %s to node %s: %v", chunk.Id, utils.Nodes[nodeIndex], err)
 		}
 
 		// location[fmt.Sprintf("Node%d", nodeIndex)] = chunk.Id
@@ -117,7 +117,7 @@ func SendChunks(chunks *[]models.Chunk, filename string, filesize float64) error
 func sendMetaData(md *models.MetaData) error {
 
 	conn, err := net.Dial("tcp", nameNode)
-	fmt.Println("meta data location:", md.Location)
+	logger.InfoLogger.Println("meta data location:", md.Location)
 
 	if err != nil {
 		return fmt.Errorf("Error connecting to the Name node server")
@@ -155,7 +155,7 @@ func sendMetaData(md *models.MetaData) error {
 		return fmt.Errorf("Response is not 200", serverResponse)
 	}
 
-	fmt.Println("Metadata saved successfully to the namenode")
+	logger.InfoLogger.Println("Metadata saved successfully to the namenode")
 	return nil
 }
 
@@ -178,13 +178,13 @@ func sendChunkToDataNode(conn net.Conn, chunkData *models.ChunkData) error {
 		return fmt.Errorf("Failed to encode chunk : %v", err)
 	}
 
-	log.Println("ChunkId", chunkData.FileId)
-	log.Println("ChunkName", chunkData.Filename)
-	log.Println("chunkData length", len(chunkData.Data))
+	logger.InfoLogger.Println("ChunkId", chunkData.FileId)
+	logger.InfoLogger.Println("ChunkName", chunkData.Filename)
+	logger.InfoLogger.Println("chunkData length", len(chunkData.Data))
 
 	response, err := reader.ReadString('\n')
 	if err != nil {
-		fmt.Println("Response", string(response))
+		logger.InfoLogger.Println("Response", string(response))
 		return fmt.Errorf("Failed to read the response : %v", err)
 	}
 
@@ -218,8 +218,8 @@ func FetchChunks(metaData *models.MetaData) (*[]byte, error) {
 	for _, key := range keys {
 		value := location[key]
 
-		log.Println("Key:", key, "Value:", value)
-		log.Println("Chunk stored in:", mappingData[value])
+		logger.InfoLogger.Println("Key:", key, "Value:", value)
+		logger.InfoLogger.Println("Chunk stored in:", mappingData[value])
 
 		data, err := getChunkFromNode(metaData.Filename, key, mappingData[value])
 		if err != nil {
@@ -266,7 +266,7 @@ func FetchChunks(metaData *models.MetaData) (*[]byte, error) {
 
 func getChunkFromNode(filename string, chunkId string, nodeAddr string) ([]byte, error) {
 
-	log.Println("Node address we are passing is :", nodeAddr)
+	logger.InfoLogger.Println("Passed node address:", nodeAddr)
 
 	conn, err := net.Dial("tcp", nodeAddr)
 	if err != nil {

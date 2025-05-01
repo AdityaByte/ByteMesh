@@ -3,11 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/AdityaByte/bytemesh/client"
 	"github.com/AdityaByte/bytemesh/coordinator"
+	"github.com/AdityaByte/bytemesh/logger"
 	"github.com/AdityaByte/bytemesh/middleware"
 )
 
@@ -46,30 +46,30 @@ func main() {
 	if *fileLocation != "" {
 		file, err := client.Upload(*fileLocation)
 		if err != nil {
-			log.Fatalf("%v", err)
+			logger.ErrorLogger.Fatalf("%v", err)
 		}
 
 		chunks, filename, filesize, err := middleware.CreateChunk(file)
 		if err != nil {
-			log.Fatalf("%v", err)
+			logger.ErrorLogger.Fatalf("%v", err)
 		}
 
 		for i, chunk := range *chunks {
-			log.Println("Iteration:", i, "Chunk ID:", chunk.Id, "Data Length:", len(chunk.Data))
+			logger.InfoLogger.Println("Iteration:", i, "Chunk ID:", chunk.Id, "Data Length:", len(chunk.Data))
 		}
 
 		if err := coordinator.SendChunks(chunks, filename, filesize); err != nil {
-			log.Fatalf("%v", err)
+			logger.ErrorLogger.Fatalf("%v", err)
 		}
 
 		if err := os.Remove(fmt.Sprintf("../storage/%s", filename)); err != nil {
-			log.Println("Failed to remove the file from the storage folder:", err)
+			logger.ErrorLogger.Println("Failed to remove the file from the storage folder:", err)
 		}
 	}
 
 	if *downloadFileName != "" {
 		if err := client.Download(*downloadFileName); err != nil {
-			log.Fatalf("%v", err)
+			logger.ErrorLogger.Fatalf("%v", err)
 		}
 	}
 
