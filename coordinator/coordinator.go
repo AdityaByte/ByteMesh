@@ -18,8 +18,6 @@ import (
 
 const nameNode = ":9004"
 
-
-
 func SendChunks(chunks *[]models.Chunk, filename string, filesize float64) error {
 
 	if filename == "" {
@@ -186,6 +184,7 @@ func sendChunkToDataNode(conn net.Conn, chunkData *models.ChunkData) error {
 
 	response, err := reader.ReadString('\n')
 	if err != nil {
+		fmt.Println("Response", string(response))
 		return fmt.Errorf("Failed to read the response : %v", err)
 	}
 
