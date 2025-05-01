@@ -38,7 +38,7 @@ func (s *Server) Start() error {
 	}
 	s.listener = listener
 	defer s.listener.Close()
-	log.Println("Data Node 2 is listening on:", s.listenAddr)
+	log.Println("Data Node 1 is listening on:", s.listenAddr)
 	s.acceptConnection()
 
 	return nil
@@ -69,7 +69,7 @@ func handleConnection(conn net.Conn) {
 				log.Println("Client Disconnected")
 				return
 			}
-			log.Fatalf("Read error : %v", err)
+			log.Fatalf("Failed to fetch the request type: %v", err)
 			return
 		}
 
@@ -78,12 +78,16 @@ func handleConnection(conn net.Conn) {
 
 		switch requestType {
 		case "GET":
-			if err := handleGetRequest(conn, reader, writer); err != nil {
+			if err := handleGetRequest(reader, writer); err != nil {
 				log.Fatalf("GET Failed: %v", err)
 			}
 		case "POST":
 			if err := handlePostRequest(reader, writer); err != nil {
 				log.Fatalf("POST Failed: %v", err)
+			}
+		case "HEALTH":
+			if err := Health(conn, reader, writer); err != nil {
+				log.Fatalf("HEALTH CHECK FAILED: %v", err)
 			}
 		default:
 			writer.WriteString("Error: Invalid Request\n")
@@ -94,12 +98,12 @@ func handleConnection(conn net.Conn) {
 	}
 }
 
-func handleGetRequest(conn net.Conn, reader *bufio.Reader, writer *bufio.Writer) error {
+func handleGetRequest(reader *bufio.Reader, writer *bufio.Writer) error {
 
 	filename, err := reader.ReadString('\n')
 	
 	if err != nil {
-		return fmt.Errorf("Failed to read the filename %v", err)
+		return fmt.Errorf("ERROR: Failed to read the filename %v", err)
 	}
 
 	log.Println("filename is", filename)
@@ -107,7 +111,7 @@ func handleGetRequest(conn net.Conn, reader *bufio.Reader, writer *bufio.Writer)
 	isEmpty := utils.CheckEmptyField(filename)
 	
 	if isEmpty {
-		return fmt.Errorf("Filename is empty")
+		return fmt.Errorf("ERROR: Filename is empty")
 	}
 
 	filename = strings.TrimSpace(filename)
@@ -115,13 +119,13 @@ func handleGetRequest(conn net.Conn, reader *bufio.Reader, writer *bufio.Writer)
 	chunkId, err := reader.ReadString('\n')
 
 	if err != nil {
-		return fmt.Errorf("Failed to read chunkid: %v", err)
+		return fmt.Errorf("ERROR: Failed to read chunkid: %v", err)
 	}
 
 	isEmpty = utils.CheckEmptyField(chunkId)
 
 	if isEmpty {
-		return fmt.Errorf("Chunk Id is empty")
+		return fmt.Errorf("ERROR: Chunk Id is empty")
 	}
 
 	chunkId = strings.TrimSpace(chunkId)
@@ -138,16 +142,20 @@ func handleGetRequest(conn net.Conn, reader *bufio.Reader, writer *bufio.Writer)
 	// firstly we are sending the size of the chunk so that the client must read all the data as per the size.
 
 	chunkSize := uint32(len(data))
-	if err := binary.Write(conn, binary.BigEndian, chunkSize); err != nil {
-		return fmt.Errorf("Failed to send the chunk size: %v", err)
+	if err := binary.Write(writer, binary.BigEndian, chunkSize); err != nil {
+		return fmt.Errorf("ERROR: Failed to send the chunk size: %v", err)
 	}
 
-	_, err = conn.Write(data)
+	nn, err := writer.Write(data)
 	if err != nil {
-		return fmt.Errorf("Error sending data %v", err)
+		return fmt.Errorf("ERROR: Failed to send data %v", err)
+	}
+	if err := writer.Flush(); err != nil {
+		return fmt.Errorf("ERROR: Failed to Flush out the data: %v", err)
 	}
 
-	log.Printf("Sent Chunk %s : %d bytes", chunkId, len(data))
+	log.Println("Length of the data:", nn)
+	log.Println("Data sent successfully")
 	return nil
 }
 
@@ -155,7 +163,7 @@ func getBytes(filename string, chunkId string) ([]byte, error) {
 	
 	data, err := os.ReadFile(fmt.Sprintf("storage/%s/%s", filename, chunkId))
 	if err != nil {
-		return nil, fmt.Errorf("Failed to read the file: %v", err)
+		return nil, fmt.Errorf("ERROR: Failed to read the file: %v", err)
 	}
 
 	return data, nil
