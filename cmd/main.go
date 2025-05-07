@@ -9,6 +9,7 @@ import (
 	"github.com/AdityaByte/bytemesh/coordinator"
 	"github.com/AdityaByte/bytemesh/logger"
 	"github.com/AdityaByte/bytemesh/middleware"
+	"github.com/AdityaByte/bytemesh/utils"
 )
 
 // The main purpose of the distributed file storage system is to allow users to
@@ -46,11 +47,13 @@ func main() {
 	if *fileLocation != "" {
 		file, err := client.Upload(*fileLocation)
 		if err != nil {
+			utils.RemoveFile(file.Name()) // If something fails out we remove the file from the local folder.
 			logger.ErrorLogger.Fatalf("%v", err)
 		}
 
 		chunks, filename, filesize, err := middleware.CreateChunk(file)
 		if err != nil {
+			utils.RemoveFile(file.Name())
 			logger.ErrorLogger.Fatalf("%v", err)
 		}
 
@@ -59,6 +62,7 @@ func main() {
 		}
 
 		if err := coordinator.SendChunks(chunks, filename, filesize); err != nil {
+			utils.RemoveFile(file.Name())
 			logger.ErrorLogger.Fatalf("%v", err)
 		}
 
