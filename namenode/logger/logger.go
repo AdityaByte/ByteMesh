@@ -13,5 +13,5 @@ const (
 
 var (
 	InfoLogger = log.New(os.Stdout, green+"INFO: "+reset, log.Ldate|log.Ltime|log.Lshortfile)
-	ErrorLogger = log.New(os.Stdout, red+"INFO: "+reset, log.Ldate|log.Ltime|log.Lshortfile)
+	ErrorLogger = log.New(os.Stdout, red+"ERROR: "+reset, log.Ldate|log.Ltime|log.Lshortfile)
 )
