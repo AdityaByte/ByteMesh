@@ -25,6 +25,9 @@ func CreateToken(username string) (string, error) {
 		return "", fmt.Errorf("ERROR: Failed to generate the private key, %s", err)
 	}
 
+	// here we need to set the private key.
+	publicKey = &privateKey.PublicKey
+
 	// Now we have to generate a token
 	token := jwt.NewWithClaims(jwt.SigningMethodES256, jwt.MapClaims{
 		"username": username,
