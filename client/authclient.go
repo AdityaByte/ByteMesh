@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/AdityaByte/bytemesh/database"
 	"github.com/AdityaByte/bytemesh/datanodes/server2/logger"
 	"github.com/AdityaByte/bytemesh/utils"
 )
@@ -68,7 +67,7 @@ func SignUp(username string, password string) error {
 	return nil
 }
 
-func LogIn(username string, password string, repo *database.MongoRepository) error {
+func LogIn(username string, password string) error {
 
 	if utils.CheckEmptyField(username) || utils.CheckEmptyField(password) {
 		return fmt.Errorf("ERROR: Field's are empty")
@@ -116,6 +115,8 @@ func ValidateToken() error {
 
 	// Now we have to convert the token data to string
 	tokenString := string(data)
+	
+	// logger.InfoLogger.Println("Fetch token from storage:", tokenString)
 
 	// Now we have to create a request and send that to the authserver
 	req, err := http.NewRequest("GET", authServerURL+"/validate", nil)
@@ -137,6 +138,10 @@ func ValidateToken() error {
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("ERROR: Failed to read the response %v", err)
+	}
+
+	if resp.StatusCode != 200 {
+		return fmt.Errorf(resp.Status)
 	}
 
 	logger.InfoLogger.Println("Response Status:", resp.Status)
