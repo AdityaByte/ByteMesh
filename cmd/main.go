@@ -11,13 +11,10 @@ import (
 	"time"
 
 	"github.com/AdityaByte/bytemesh/client"
-
-	// "github.com/AdityaByte/bytemesh/coordinator"
-	"github.com/AdityaByte/bytemesh/database"
+	"github.com/AdityaByte/bytemesh/coordinator"
 	"github.com/AdityaByte/bytemesh/logger"
-
-	// "github.com/AdityaByte/bytemesh/middleware"
-	// "github.com/AdityaByte/bytemesh/utils"
+	"github.com/AdityaByte/bytemesh/middleware"
+	"github.com/AdityaByte/bytemesh/utils"
 	"github.com/joho/godotenv"
 )
 
@@ -129,12 +126,7 @@ func main() {
 
 		loginCmd.Parse(os.Args[2:])
 
-		repo, err := database.LoadMongoRepository()
-		if err != nil {
-			logger.ErrorLogger.Fatalf("%v", err)
-		}
-
-		if err := client.LogIn(*loginUsername, *loginPassword, repo); err != nil {
+		if err := client.LogIn(*loginUsername, *loginPassword); err != nil {
 			logger.ErrorLogger.Fatalf("%v", err)
 		}
 
@@ -170,72 +162,62 @@ func main() {
 		}
 
 	default:
-		return
+
+		const (
+			version = "1.0.0"
+			author  = "@AdityaByte"
+		)
+
+		flag.Usage = func() {
+			fmt.Fprintf(flag.CommandLine.Output(), "Usage : %s\n", "\nStarting the Authentication Server:\n \tgo run . auth start\nStopping the Authentication Server: \n\tgo run . auth stop\nSigning Up: \n\tgo run . signup -username <username> -password <password>\nLogging In: \n\tgo run . login -username <username> -password <password>\nUploading the file and Downloading the file: \n\tgo run . -upload \"FileLocation\" -download \"FileName\"")
+			fmt.Fprintf(flag.CommandLine.Output(), "Version : %s\n", version)
+			fmt.Fprintf(flag.CommandLine.Output(), "Author : %s\n", author)
+			fmt.Fprintf(flag.CommandLine.Output(), "Options:\n")
+			flag.PrintDefaults()
+		}
+
+		// Here we need to validate if the user is doing the upload or it is doing the download.
+		fileLocation := flag.String("upload", "", "Location of the file to Upload")
+		fileName := flag.String("download", "", "Name of the file to download")
+
+		flag.Parse()
+
+		if err := client.ValidateToken(); err != nil {
+			logger.ErrorLogger.Fatalln(err)
+		}
+
+		if *fileLocation != "" {
+			file, err := client.Upload(*fileLocation)
+			if err != nil {
+				utils.RemoveFile(file.Name()) // If something fails out we remove the file from the local folder.
+				logger.ErrorLogger.Fatalf("%v", err)
+			}
+
+			chunks, filename, filesize, err := middleware.CreateChunk(file)
+			if err != nil {
+				utils.RemoveFile(file.Name())
+				logger.ErrorLogger.Fatalf("%v", err)
+			}
+
+			for i, chunk := range *chunks {
+				logger.InfoLogger.Println("Iteration:", i, "Chunk ID:", chunk.Id, "Data Length:", len(chunk.Data))
+			}
+
+			if err := coordinator.SendChunks(chunks, filename, filesize); err != nil {
+				utils.RemoveFile(file.Name())
+				logger.ErrorLogger.Fatalf("%v", err)
+			}
+
+			if err := os.Remove(fmt.Sprintf("../storage/%s", filename)); err != nil {
+				logger.ErrorLogger.Println("Failed to remove the file from the storage folder:", err)
+			}
+		}
+
+		if *fileName != "" {
+			if err := client.Download(*fileName); err != nil {
+				logger.ErrorLogger.Fatalf("%v", err)
+			}
+		}
 
 	}
 }
-
-// func main() {
-
-// 	if len(os.Args) < 2 {
-// 		os.Exit(1)
-// 	}
-
-// 	switch os.Args[1]{
-// 	case "signup":
-// 		// We use this case for signing up.
-// 	case "login":
-// 		// We use this for logging in when we logs in and create a jwt token which validate the session and the username and password.
-// 	case "default":
-// 		// If the session token is valid we will use this without any thing ok.
-// 	}
-
-// 	const version = "v1.0.0"
-// 	const author = "@AdityaByte"
-// 	fileLocation := flag.String("u", "", "Upload File Location")
-// 	downloadFileName := flag.String("d", "", "Download File name")
-
-// 	flag.Usage = func() {
-// 		fmt.Fprintf(flag.CommandLine.Output(), "Usage : %s\n", "bytemesh -u <Upload File Location>  -d <Download file name>")
-// 		fmt.Fprintf(flag.CommandLine.Output(), "Version : %s\n", version)
-// 		fmt.Fprintf(flag.CommandLine.Output(), "Author : %s\n", author)
-// 		fmt.Fprintf(flag.CommandLine.Output(), "Options:\n")
-// 		flag.PrintDefaults()
-// 	}
-
-// 	flag.Parse()
-
-// 	if *fileLocation != "" {
-// 		file, err := client.Upload(*fileLocation)
-// 		if err != nil {
-// 			utils.RemoveFile(file.Name()) // If something fails out we remove the file from the local folder.
-// 			logger.ErrorLogger.Fatalf("%v", err)
-// 		}
-
-// 		chunks, filename, filesize, err := middleware.CreateChunk(file)
-// 		if err != nil {
-// 			utils.RemoveFile(file.Name())
-// 			logger.ErrorLogger.Fatalf("%v", err)
-// 		}
-
-// 		for i, chunk := range *chunks {
-// 			logger.InfoLogger.Println("Iteration:", i, "Chunk ID:", chunk.Id, "Data Length:", len(chunk.Data))
-// 		}
-
-// 		if err := coordinator.SendChunks(chunks, filename, filesize); err != nil {
-// 			utils.RemoveFile(file.Name())
-// 			logger.ErrorLogger.Fatalf("%v", err)
-// 		}
-
-// 		if err := os.Remove(fmt.Sprintf("../storage/%s", filename)); err != nil {
-// 			logger.ErrorLogger.Println("Failed to remove the file from the storage folder:", err)
-// 		}
-// 	}
-
-// 	if *downloadFileName != "" {
-// 		if err := client.Download(*downloadFileName); err != nil {
-// 			logger.ErrorLogger.Fatalf("%v", err)
-// 		}
-// 	}
-
-// }
