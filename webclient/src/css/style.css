@@ -1,0 +1,187 @@
+@import url('https://fonts.googleapis.com/css2?family=Poetsen+One&family=Great+Vibes');
+
+@font-face {
+    font-family: 'Gilroy';
+    src: url("../../assets/fonts/Gilroy-Bold.ttf") format('truetype');
+    font-weight: bold;
+    font-style: normal;
+}
+
+body {
+    margin: 0;
+    /* overflow: hidden; */
+    height: 100vh;
+    position: relative;
+}
+
+#particles-js {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    z-index: 0;
+}
+
+#particles-js canvas {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+}
+
+.content {
+    position: relative;
+    color: white;
+    font-family: 'Arial', sans-serif;
+    z-index: 1;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    pointer-events: none;
+    font-family: Gilroy;
+    box-sizing: border-box;
+    overflow-x: hidden;
+}
+
+.content > * {
+    pointer-events: auto;
+}
+
+nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 2rem 12rem;
+}
+
+nav .logo{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+}
+
+nav .logo img {
+    width: 30px;
+    height: 30px;
+}
+
+nav .logo span{
+    font-weight: 400;
+    font-style: normal;
+    font-size: 2ch;
+}
+
+nav ul {
+    width: 10%;
+    display: flex;
+    justify-content: space-around;
+}
+
+nav ul a {
+    text-decoration: none;
+    color: whitesmoke;
+    font-family: sans-serif;
+    font-weight: 400;
+}
+
+header {
+    width: 100%;
+    height: 85vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 2ch;
+    padding: 0rem 12rem;
+}
+
+header h1 {
+    font-size: 6ch;
+    line-height: normal;
+    margin: 0;
+}
+
+header p {
+    font-size: 2ch;
+}
+
+header button {
+    width: 20%;
+    padding: 20px 0px;
+    border-radius: 40px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    color: white;
+    border: 2px solid white;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.section1 {
+    height: 20vw;
+    display: flex;
+    justify-content: space-between;
+    padding: 0rem 12rem;
+    flex-wrap: wrap;
+}
+
+.section1 .card {
+    background-color: white;
+    width: 18vw;
+    height: 90%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    align-items: center;
+    text-align: center;
+    padding: 2rem;
+    box-sizing: border-box;
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    color: #1a1a2e;
+}
+
+footer {
+    width: 100%;
+    height: 30vw;
+    background-color: rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+footer .upper-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 80%;
+    padding: 0rem 12rem;
+}
+
+.upper-content .main {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    height: 100%;
+}
+
+.main img {
+    width: 60px;
+    height: 60px;
+}
+
+.upper-content .info {
+    width: 40%;
+}
+
+.upper-content .links {
+    display: flex;
+    flex-direction: column;
+}
+
+footer .lower-content{
+    background-color: #16213e;
+    text-align: center;
+}
