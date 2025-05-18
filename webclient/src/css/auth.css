@@ -1,0 +1,115 @@
+@import url('https://fonts.googleapis.com/css2?family=Poetsen+One&family=Great+Vibes');
+
+@font-face {
+    font-family: 'Gilroy';
+    src: url("../../assets/fonts/Gilroy-Bold.ttf") format('truetype');
+    font-weight: bold;
+    font-style: normal;
+}
+
+body {
+    margin: 0;
+    /* overflow: hidden; */
+    height: 100vh;
+    position: relative;
+}
+
+#particles-js {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    z-index: 0;
+}
+
+#particles-js canvas {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+}
+
+.container {
+    position: relative;
+    color: white;
+    font-family: 'Arial', sans-serif;
+    z-index: 1;
+    min-height: 100vh;
+    display: flex;
+    pointer-events: none;
+    font-family: Gilroy;
+    box-sizing: border-box;
+    overflow-x: hidden;
+    align-items: center;
+    justify-content: center;
+    padding: 0rem 12rem;
+}
+
+.container > * {
+    pointer-events: auto;
+}
+
+.container .center-content {
+    width: 80vw;
+    height: 70vh;
+    background-color: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(5px);
+    box-sizing: border-box;
+    box-shadow: 0px 0px 1px  white;
+    border-radius: 9px;
+    padding: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.center-content .right-content{
+    height: 100%;
+    width: 50%;
+}
+
+.container .center-content .right-content img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    border-radius: 0px 9px 9px 0px;
+}
+
+.center-content .left-content {
+    width: 50%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 5rem 8rem;
+    box-sizing: border-box;
+}
+
+.left-content input {
+    width: 100%;
+    padding: 0.8rem 0.8rem;
+    box-sizing: border-box;
+    border-radius: 9px;
+    background-color: white;
+    border: 1px solid white;
+    font-weight: 700;
+}
+
+.left-content button {
+    width: 40%;
+    box-sizing: border-box;
+    padding: 0.9rem 0.8rem;
+    font-weight: bold;
+    color: white;
+    background-color: #16213e;
+    border: 2px solid white;
+    border-radius: 9px;
+    cursor: pointer;
+}
+
+.left-content button:hover {
+    border-color: #16213e;
+    color: #16213e;
+    background-color: white;
+    transition: 0.1s;
+}
