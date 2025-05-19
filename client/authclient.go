@@ -80,7 +80,7 @@ func LogIn(username string, password string) error {
 	})
 
 	// Creating a new get request
-	req, err := http.NewRequest("GET", authServerURL+"/login", &jsonBuffer)
+	req, err := http.NewRequest("POST", authServerURL+"/login", &jsonBuffer)
 	if err != nil {
 		return fmt.Errorf("ERROR: Failed to create a new request %v", err)
 	}
@@ -115,7 +115,7 @@ func ValidateToken() error {
 
 	// Now we have to convert the token data to string
 	tokenString := string(data)
-	
+
 	// logger.InfoLogger.Println("Fetch token from storage:", tokenString)
 
 	// Now we have to create a request and send that to the authserver
