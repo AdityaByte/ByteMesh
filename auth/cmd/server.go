@@ -6,15 +6,16 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/AdityaByte/bytemesh/auth/middleware"
 	"github.com/AdityaByte/bytemesh/auth/service"
 	"github.com/AdityaByte/bytemesh/datanodes/server1/logger"
 )
 
 func main() {
 
-	http.HandleFunc("/signup", service.Signup)
-	http.HandleFunc("/login", service.Login)
-	http.HandleFunc("/validate", service.ValidateToken)
+	http.HandleFunc("/signup", middleware.EnableCORS(service.Signup))
+	http.HandleFunc("/login", middleware.EnableCORS(service.Login))
+	http.HandleFunc("/validate", middleware.EnableCORS(service.ValidateToken))
 
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
