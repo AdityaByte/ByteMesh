@@ -11,11 +11,22 @@
     <div class="container">
         <div class="center-content">
             <div class="left-content">
-                <h1>Login</h1>
-                <input type="text" name="" id="" placeholder="username">
-                <input type="password" name="" id="" placeholder="password">
-                <a href="#" style="color: white;">Don't have an account? Signup</a>
-                <button type="submit">login</button>
+                <form class="login-content active" id="login-form">
+                    <h1>Login</h1>
+                    <input type="text" name="username"  placeholder="username" required>
+                    <input type="password" name="password"  placeholder="password" required>
+                    <span id="info" style="visibility: hidden;"></span>
+                    <a id="switch-to-signup" href="#" style="color: white;">Don't have an account? Signup</a>
+                    <button type="submit">login</button>
+                </form>
+                <form class="signup-content" id="signup-form">
+                    <h1>Signup</h1>
+                    <input type="text" name="username" placeholder="username">
+                    <input type="password" name="password" placeholder="password">
+                    <a id="switch-to-login" href="#" style="color: white;">Already have an account? Login</a>
+                    <span id="info" style="visibility: hidden;"></span>
+                    <button type="submit">Signup</button>
+                </form>
             </div>
             <div class="right-content">
                 <img src="https://imgs.search.brave.com/FCbIYdcUvdnc1cljKlzRv3DpNSB551f4wSMtvmYAuMA/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9pbWcu/ZnJlZXBpay5jb20v/ZnJlZS1waG90by9j/b21wdXRlci1zZWN1/cml0eS13aXRoLWxv/Z2luLXBhc3N3b3Jk/LXBhZGxvY2tfMTA3/NzkxLTE2MTkxLmpw/Zz9zZW10PWFpc19o/eWJyaWQmdz03NDA" alt="">
@@ -25,4 +36,6 @@
 </body>
 <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
 <script src="js/particles.js"></script>
+<script src="js/switch-content.js"></script>
+<script src="js/auth.js"></script>
 </html>
