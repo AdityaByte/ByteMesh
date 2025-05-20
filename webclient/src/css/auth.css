@@ -115,31 +115,53 @@ body {
 .login-content input,
 .signup-content input {
     width: 100%;
-    padding: 0.8rem 0.8rem;
-    box-sizing: border-box;
-    border-radius: 9px;
-    background-color: white;
-    border: 1px solid white;
-    font-weight: 700;
+    padding: 0.75rem 1rem;
+    background-color: rgba(255, 255, 255, 0.05); /* subtle contrast */
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.3s ease, background-color 0.3s ease;
+}
+
+.login-content input:focus,
+.signup-content input:focus {
+    border-color: #00bcd4;
+    background-color: rgba(255, 255, 255, 0.08);
 }
 
 .login-content button,
 .signup-content button {
-    width: 40%;
-    box-sizing: border-box;
-    padding: 0.9rem 0.8rem;
-    font-weight: bold;
-    color: white;
-    background-color: #16213e;
-    border: 2px solid white;
-    border-radius: 9px;
-    cursor: pointer;
+  width: 40%;
+  padding: 0.8rem 1.2rem;
+  font-weight: bold;
+  color: white;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  border-radius: 2rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(4px);
 }
 
 .login-content button:hover,
 .signup-content button:hover {
-    border-color: #16213e;
-    color: #16213e;
-    background-color: white;
-    transition: 0.1s;
+  color: #16213e;
+  background-color: #ffffff;
+  border-color: #ffffff;
+  transform: translateY(-2px);
+}
+
+#switch-to-signup {
+    color: rgba(255, 255, 255, 0.8);
+    text-decoration: none;
+    font-size: 0.95rem;
+    transition: color 0.3s ease;
+}
+
+#switch-to-signup:hover {
+    color: #00bcd4;
+    text-decoration: underline;
 }

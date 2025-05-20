@@ -1,0 +1,226 @@
+@import url('https://fonts.googleapis.com/css2?family=Poetsen+One&family=Great+Vibes');
+
+@font-face {
+    font-family: 'Gilroy';
+    src: url("../../assets/fonts/Gilroy-Bold.ttf") format('truetype');
+    font-weight: bold;
+    font-style: normal;
+}
+
+body {
+    margin: 0;
+    /* overflow: hidden; */
+    height: 100vh;
+    position: relative;
+}
+
+#particles-js {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    z-index: 0;
+}
+
+#particles-js canvas {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+}
+
+.container {
+    position: relative;
+    color: white;
+    z-index: 1;
+    min-height: 100vh;
+    pointer-events: none;
+    font-family: Gilroy;
+    box-sizing: border-box;
+    padding: 0rem 12rem;
+}
+
+.container > * {
+    pointer-events: auto;
+}
+
+.container .base-bar {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    display: flex;
+    transform: translateX(-50%);
+    width: 30%;
+    justify-content: space-evenly;
+    box-sizing: border-box;
+    margin-bottom: 3rem;
+    background-color: rgba(255, 255, 255, 0.1);
+    padding: 0.9rem 0;
+    border-radius: 2rem;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+}
+
+.base-bar button {
+  background-color: #ffffff;
+  color: #374151; /* gray-700 */
+  padding: 0.5rem 1.25rem;
+  border: 1px solid #d1d5db;
+  border-radius: 2rem;
+  font-size: 0.67rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.base-bar button:hover {
+  background-color: #e0e7ff;
+  border-color: #6366f1;
+  color: #4338ca;
+}
+.base-bar button:active {
+  transform: scale(0.98);
+  background-color: #c7d2fe;
+}
+
+.base-bar .active {
+    background-color: #374151;
+    color: white;
+}
+
+.container {
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    flex-direction: column;
+
+}
+
+.main-content,
+.upload-content {
+    width: 100%;
+    height: 80vh;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.main-content .greet-content {
+    margin-top: 1.5rem;
+}
+
+.main-content .file-list {
+    width: 100%;
+    height: 90%;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    overflow-y: auto;
+}
+
+.file-list .file-card {
+    width: 100%;
+    display: flex;
+    justify-content: space-evenly;
+    background-color: rgba(255, 255, 255, 0.1);
+    box-sizing: border-box;
+    padding: 9px 0px;
+    align-items: center;
+    margin-top: 1px 0px 1px 0px;
+    border-radius: 2rem;
+}
+
+.file-card button {
+    border-radius: 2rem;
+    font-size: 10px;
+    padding: 5px 15px;
+    color: white;
+    background: #374151;
+}
+
+.upload-content {
+    width: 100%;
+    height: 80vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    justify-content: space-evenly;
+}
+
+.upload-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+
+.dropzone {
+    width: 100%;
+    max-width: 600px;
+    height: 260px;
+    background-color: #f9fafb;
+    border: 2px dashed #d1d5db;
+    border-radius: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.3s, border-color 0.3s;
+    padding: 20px;
+    text-align: center;
+}
+
+.dropzone:hover {
+    background-color: #f3f4f6;
+    border-color: #6b7280;
+}
+
+.dropzone-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.upload-icon {
+    width: 40px;
+    height: 40px;
+    color: #6b7280;
+}
+
+.file-input {
+    display: none;
+}
+
+.dropzone p {
+    font-size: 14px;
+    color: #6b7280;
+}
+
+.dropzone small {
+    font-size: 12px;
+    color: #9ca3af;
+}
+
+#upload-btn {
+  background-color: #3b82f6;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  margin-top: 1rem;
+}
+
+#upload-btn:hover {
+  background-color: #2563eb;
+  transform: translateY(-1px);
+}
+
+#upload-btn:active {
+  background-color: #1d4ed8;
+  transform: translateY(0);
+}
+
