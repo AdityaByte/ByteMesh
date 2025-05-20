@@ -4,13 +4,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 
 	"github.com/AdityaByte/bytemesh/auth/config"
 	"github.com/AdityaByte/bytemesh/auth/model"
 	"github.com/AdityaByte/bytemesh/auth/repository"
 	"github.com/AdityaByte/bytemesh/datanodes/server3/logger"
 )
+
+type token struct {
+	Token string `json:token`
+}
 
 func Login(w http.ResponseWriter, r *http.Request) {
 
@@ -40,6 +43,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 
 	// When the credentials are valid we have to generate a JWT Token which validates the each upcoming requests such as upload and download.
 
+	// Creating the token.
 	token, err := config.CreateToken(user.Username)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -47,27 +51,10 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := os.MkdirAll("../.auth/", os.ModePerm); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "Failed to create the directory %v", err)
-		return
-	}
+	logger.InfoLogger.Println("Token has been generated.")
 
-	file, err := os.Create("../.auth/.jwt_token")
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "Failed to create the file %v", err)
-		return
-	}
-
-	if _, err := file.WriteString(token); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "Failed to write in the string %v", err)
-		return
-	}
-
-	logger.InfoLogger.Println("Token has been created to .auth")
-
+	// Sending the token back to the client with header.
+	w.Header().Set("Authorization", "Bearer "+token)
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, "Valid credentials")
 }
