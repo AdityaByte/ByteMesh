@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/AdityaByte/bytemesh/datanodes/server2/logger"
 	"github.com/AdityaByte/bytemesh/utils"
@@ -101,6 +102,30 @@ func LogIn(username string, password string) error {
 		return fmt.Errorf("ERROR: Failed to read the response %v", err)
 	}
 
+
+	if resp.StatusCode == 200 {
+		tokenString := resp.Header.Get("Authorization")
+		tokenString = strings.Trim(tokenString, "Bearer ")
+		// Here we need to save the token locally.
+		if err := os.MkdirAll("../.auth/", os.ModePerm); err != nil {
+			return fmt.Errorf("ERROR: Failed to create the .auth directory %v", err)
+		}
+
+		// Now we need to save the auth token locally ok
+		file, err := os.Create("../.auth/.jwt-token")
+		if err != nil {
+			return fmt.Errorf("ERROR: Failed to create the file %v", err)
+		}
+
+		// Now we need to write the content
+		if _, err := file.WriteString(tokenString); err != nil {
+			return fmt.Errorf("ERROR: Failed to write the tokenstring locally %v", err)
+		}
+
+		logger.InfoLogger.Println("Token saved successfully.")
+
+	}
+
 	logger.InfoLogger.Println("Response Code:", resp.Status)
 	logger.InfoLogger.Println("Response Body:", string(body))
 
@@ -108,7 +133,7 @@ func LogIn(username string, password string) error {
 }
 
 func ValidateToken() error {
-	data, err := os.ReadFile("../.auth/.jwt_token")
+	data, err := os.ReadFile("../.auth/.jwt-token")
 	if err != nil {
 		return fmt.Errorf("Failed to read the token %v", err)
 	}
