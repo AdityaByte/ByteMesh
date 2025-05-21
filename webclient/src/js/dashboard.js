@@ -1,6 +1,115 @@
 const homeSwitchingBtn = document.getElementById("home-switcher")
 const uploadSwitchingBtn = document.getElementById("upload-switcher")
 
+// When the document is loaded initailly i need to set the content ok.
+document.addEventListener("DOMContentLoaded", function() {
+    // Here we need to fetch out the content from the backend server.
+    // So here what i have to do i have to do some thing like search for the token thing n all.
+
+    token = localStorage.getItem("token")
+    if (!token || token.trim() === "")  {
+        // In that case alert that u cannot access the pages ok.
+        alert("Unauthorized")
+        return
+    }
+
+    // console.log("token:", token)
+    console.log("Authorized")
+    // Else you can load the content.
+    user = localStorage.getItem("user")
+    console.log(user)
+    if (!user || user.trim() === "") {
+        console.error("Username is empty")
+    }
+
+    document.getElementById("greet").textContent = `Hey ${localStorage.getItem("user")}`
+
+    const gatewayURL = "http://localhost:4444"
+
+    fetch(`${gatewayURL}/fetchall?user=${user}`, {
+        method: "GET",
+    })
+    .then(response => {
+        if (response.status != 200) {
+            throw new Error("Failed to fetch files")
+        }
+        return response.json()
+    })
+    .then(jsonResponse => {
+        // Here we need to handle the 201 response.
+        // <div class="file-card">
+        // <img width="12px" alt="">
+        // <span id="filename"></span>
+        // <span id="file-upload-date">12/02/2025</span>
+        // <button>Download</button>
+        // </div>
+
+        // Create a card something like that ok.
+        const fileList = document.querySelector(".file-list")
+        const imgUrl = "https://imgs.search.brave.com/Ses02BbgloQAO7UoRZnwh1kPMpy0f_WYYJz8polU10Y/rs:fit:500:0:0:0/g:ce/aHR0cHM6Ly9zdGF0/aWMtMDAuaWNvbmR1/Y2suY29tL2Fzc2V0/cy4wMC9pbWFnZS1m/aWxlLWljb24tNzgw/eDEwMjQtZnVjOXY1/cmwucG5n"
+
+
+        // Now i have to set the content
+
+        console.log(jsonResponse)
+        console.log(typeof jsonResponse)
+
+        jsonResponse.forEach(data => {
+            // here we have to create a structure ok.
+            const fileCard = document.createElement("div")
+            fileCard.className = "file-card"
+            const img = document.createElement("img")
+            img.src = `${imgUrl}`
+            img.width = "12px"
+            const filename = document.createElement("span")
+            filename.className = "filename"
+            filename.textContent = data.Filename
+            const uploadDate = document.createElement("span")
+            uploadDate.className = "file-upload-date"
+            uploadDate.textContent = data.UploadDate
+            const size = document.createElement("span")
+            size.className = "filesize"
+            size.textContent = data.Size
+            const downloadBtn = document.createElement("button")
+            downloadBtn.className = "download-btn"
+            downloadBtn.innerHTML = "Download"
+            fileCard.append(img, filename, size, uploadDate, downloadBtn)
+            fileList.append(fileCard)
+            console.log("data appended")
+        });
+    })
+    .catch(error => {
+        console.error(error)
+    })
+
+    document.querySelector(".file-list").addEventListener("click", function(e) {
+        if (e.target && e.target.classList.contains("download-btn")) {
+            const fileCard = e.target.closest(".file-card");
+            const filenameSpan = fileCard.querySelector(".filename");
+            const filename = filenameSpan.textContent;
+            downloadFile(filename)
+        }
+    })
+
+    const downloadFile = async (filename) => {
+        await fetch(`${gatewayURL}/download?user=${user}&filename=${filename}`, {
+            method: "GET"
+        })
+        .then(response => {
+            if (response.status != 200) {
+                throw new Error(response.body)
+            }
+            return response.json()
+        })
+        .then(jsonResponse => {
+            console.log(jsonResponse)
+        })
+        .catch(err => {
+            console.error(err)
+        })
+    }
+})
+
 homeSwitchingBtn.addEventListener("click", function(event) {
     event.preventDefault()
     // Now we need to make the other content hidden and show up the main one and have to do other task too like making the backend api request and show up the content.
@@ -9,6 +118,9 @@ homeSwitchingBtn.addEventListener("click", function(event) {
     homeSwitchingBtn.classList.add("active")
     uploadSwitchingBtn.classList.remove("active")
     localStorage.setItem("content", "main-content")
+
+    // Now we need to send the request to the backend and fetch out the data of the files that the client would have.
+
 })
 
 uploadSwitchingBtn.addEventListener("click", function(event) {
