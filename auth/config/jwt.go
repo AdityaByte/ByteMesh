@@ -40,6 +40,8 @@ func CreateToken(username string) (string, error) {
 		return "", err
 	}
 
+	logger.InfoLogger.Println("Real Token:", tokenString)
+
 	return tokenString, nil
 }
 
