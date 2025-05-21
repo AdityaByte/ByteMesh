@@ -17,13 +17,13 @@ import (
 
 const addr = ":9004"
 
-func Download(filename string) error {
+func Download(filename string) (*[]byte, error) {
 
 	logger.InfoLogger.Println("Filename:", filename)
 
 	data, err := middleware.GetChunks(filename)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	logger.InfoLogger.Println("Downloaded Data length:", len(*data))
@@ -41,15 +41,17 @@ func Download(filename string) error {
 	file, err := os.Create("../download/" + filename)
 
 	if err != nil {
-		return fmt.Errorf("Error creating file %v", err)
+		return nil, fmt.Errorf("Error creating file %v", err)
 	}
+
+	defer file.Close()
 
 	reader := bytes.NewReader(*data)
 
 	_, err = io.Copy(file, reader)
 	if err != nil {
-		return fmt.Errorf("Failed to create file %v", err)
+		return nil, fmt.Errorf("Failed to create file %v", err)
 	}
 
-	return nil
+	return data, nil
 }
