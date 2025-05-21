@@ -230,7 +230,7 @@ func main() {
 		}
 
 		if *getAllFiles {
-			if err := client.RetriveUserFiles(); err != nil {
+			if _, err := client.RetriveUserFiles(""); err != nil {
 				logger.ErrorLogger.Fatalf("%v\n", err)
 			}
 		}
