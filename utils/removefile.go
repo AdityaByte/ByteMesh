@@ -11,6 +11,7 @@ import (
 func RemoveFile(filelocation string) {
 	if err := os.Remove(filelocation); err != nil {
 		logger.ErrorLogger.Printf("Failed to remove the file: %s, error: %v", filelocation, err)
+		return
 	}
 	logger.InfoLogger.Println("File removed successfully.")
 }
