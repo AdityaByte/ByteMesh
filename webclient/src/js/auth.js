@@ -1,5 +1,4 @@
-document.addEventListener('DOMContentLoaded', function (event) {
-    event.preventDefault()
+document.addEventListener('DOMContentLoaded', function () {
     // Here we have to handle authentication sending the request and fetching response all these things.
 
     const backendApiUrl = "http://localhost:8080"
