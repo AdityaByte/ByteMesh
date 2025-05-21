@@ -102,10 +102,9 @@ func LogIn(username string, password string) error {
 		return fmt.Errorf("ERROR: Failed to read the response %v", err)
 	}
 
-
 	if resp.StatusCode == 200 {
 		tokenString := resp.Header.Get("Authorization")
-		tokenString = strings.Trim(tokenString, "Bearer ")
+		tokenString = strings.TrimPrefix(tokenString, "Bearer ")
 		// Here we need to save the token locally.
 		if err := os.MkdirAll("../.auth/", os.ModePerm); err != nil {
 			return fmt.Errorf("ERROR: Failed to create the .auth directory %v", err)
@@ -114,12 +113,23 @@ func LogIn(username string, password string) error {
 		// Now we need to save the auth token locally ok
 		file, err := os.Create("../.auth/.jwt-token")
 		if err != nil {
-			return fmt.Errorf("ERROR: Failed to create the file %v", err)
+			return fmt.Errorf("ERROR: Failed to create the  token file %v", err)
 		}
 
 		// Now we need to write the content
 		if _, err := file.WriteString(tokenString); err != nil {
 			return fmt.Errorf("ERROR: Failed to write the tokenstring locally %v", err)
+		}
+
+		// We can also create a credentials and save the username too.
+		file2, err := os.Create("../.auth/.cred")
+		if err != nil {
+			return fmt.Errorf("ERROR: Failed to create the .cred file %v", err)
+		}
+
+		// Now we need to write the content
+		if _, err := file2.WriteString(username); err != nil {
+			return fmt.Errorf("ERROR: Failed to write the cred string locally %v", err)
 		}
 
 		logger.InfoLogger.Println("Token saved successfully.")
@@ -128,6 +138,14 @@ func LogIn(username string, password string) error {
 
 	logger.InfoLogger.Println("Response Code:", resp.Status)
 	logger.InfoLogger.Println("Response Body:", string(body))
+
+	return nil
+}
+
+func LogOut() error {
+	if err := os.RemoveAll("../.auth"); err != nil {
+		return fmt.Errorf("ERROR: Failed to log out %v", err)
+	}
 
 	return nil
 }
