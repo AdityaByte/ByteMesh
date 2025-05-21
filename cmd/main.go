@@ -128,9 +128,18 @@ func main() {
 
 		if err := client.LogIn(*loginUsername, *loginPassword); err != nil {
 			logger.ErrorLogger.Fatalf("%v", err)
+			return
 		}
 
 		logger.InfoLogger.Println("Login successful")
+
+	case "logout":
+		if err := client.LogOut(); err != nil {
+			logger.ErrorLogger.Println(err)
+			return
+		}
+
+		logger.InfoLogger.Println("Logout successfully")
 
 	case "auth":
 		if len(os.Args) > 3 {
@@ -179,6 +188,7 @@ func main() {
 		// Here we need to validate if the user is doing the upload or it is doing the download.
 		fileLocation := flag.String("upload", "", "Location of the file to Upload")
 		fileName := flag.String("download", "", "Name of the file to download")
+		getAllFiles := flag.Bool("getallfiles", false, "Fetching all user specific files")
 
 		flag.Parse()
 
@@ -190,13 +200,13 @@ func main() {
 			file, err := client.Upload(*fileLocation)
 			if err != nil {
 				utils.RemoveFile(file.Name()) // If something fails out we remove the file from the local folder.
-				logger.ErrorLogger.Fatalf("%v", err)
+				logger.ErrorLogger.Fatalf("%v\n", err)
 			}
 
 			chunks, filename, filesize, err := middleware.CreateChunk(file)
 			if err != nil {
 				utils.RemoveFile(file.Name())
-				logger.ErrorLogger.Fatalf("%v", err)
+				logger.ErrorLogger.Fatalf("%v\n", err)
 			}
 
 			for i, chunk := range *chunks {
@@ -205,7 +215,7 @@ func main() {
 
 			if err := coordinator.SendChunks(chunks, filename, filesize); err != nil {
 				utils.RemoveFile(file.Name())
-				logger.ErrorLogger.Fatalf("%v", err)
+				logger.ErrorLogger.Fatalf("%v\n", err)
 			}
 
 			if err := os.Remove(fmt.Sprintf("../storage/%s", filename)); err != nil {
@@ -215,7 +225,13 @@ func main() {
 
 		if *fileName != "" {
 			if err := client.Download(*fileName); err != nil {
-				logger.ErrorLogger.Fatalf("%v", err)
+				logger.ErrorLogger.Fatalf("%v\n", err)
+			}
+		}
+
+		if *getAllFiles {
+			if err := client.RetriveUserFiles(); err != nil {
+				logger.ErrorLogger.Fatalf("%v\n", err)
 			}
 		}
 
