@@ -9,6 +9,9 @@
 <body>
   <div id="particles-js"></div>
   <div class="container">
+    <div class="logout-btn-div">
+      <button id="logout-btn">Logout</button>
+    </div>
     <div class="main-content" style="display: none;">
       <div class="greet-content">
         <h1 id="greet"></h1>
@@ -16,31 +19,33 @@
       <div class="file-list">
         <!-- <div class="file-card">
           <img width="12px" alt="">
-          <span id="filename"></span>
-          <span id="file-upload-date"></span>
+          <span id="filename">example.pdf</span>
+          <span id="size">12.234kb</span>
+          <span id="file-upload-date">12-03-2004</span>
           <button>Download</button>
         </div> -->
       </div>
     </div>
   <div class="upload-content">
     <h1>Upload File</h1>
-    <form action=""></form>
-    <div class="upload-wrapper">
-      <label for="dropzone-file" class="dropzone">
-        <div class="dropzone-content">
-          <svg class="upload-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16">
-            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5
-                     5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4
-                     4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"/>
-          </svg>
-          <p><strong>Click to upload</strong> or drag and drop</p>
-        </div>
-        <input id="dropzone-file" type="file" class="file-input" />
-      </label>
-    </div>
-    <button id="upload-btn">Upload</button>
-  </form>
+    <form id="upload-form">
+      <div class="upload-wrapper">
+        <label for="dropzone-file" class="dropzone">
+          <input id="dropzone-file" type="file" name="file" class="file-input" required/>
+          <div class="dropzone-content">
+            <svg class="upload-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16">
+              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5
+                      5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4
+                      4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"/>
+            </svg>
+            <p><strong>Click to upload</strong> or drag and drop</p>
+          </div>
+        </label>
+      </div>
+      <span id="upload-info" style="visibility: hidden;"></span>
+      <button id="upload-btn" type="submit">Upload</button>
+    </form>
   </div>
     <div class="base-bar">
       <button id="home-switcher" class="active">Home</button>
