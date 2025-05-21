@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"namenodeserver/database"
 	"namenodeserver/logger"
 	"namenodeserver/model"
@@ -32,10 +33,39 @@ func FetchMetaData(ctx context.Context, filename string, extension string, mongo
 	err := mongoRepo.Collection.FindOne(ctx, filter).Decode(&metaData)
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("ERROR: Failed to find the document: %v", err)
 	}
 
 	logger.InfoLogger.Println("Meta data found:", metaData)
 
 	return &metaData, nil
+}
+
+func FetchUserSpecificMetaData(ctx context.Context, user string, mongoRepo *database.MongoRepository) (*[]model.MetaData, error) {
+
+	logger.InfoLogger.Println("Owner name:", user)
+
+	filter := bson.M{"owner": user}
+
+	var results []model.MetaData
+
+	cursor, err := mongoRepo.Collection.Find(ctx, filter)
+	if err != nil {
+		return nil, fmt.Errorf("ERROR: Failed to find the document: %v", err)
+	}
+
+	defer cursor.Close(ctx)
+
+	if err := cursor.All(ctx, &results); err != nil {
+		return nil, fmt.Errorf("ERROR: Didn't get the result: %v", err)
+	}
+
+	fmt.Println("result:", results)
+
+	// Here i want to print out the result ok.
+	for data := range results {
+		fmt.Println(data)
+	}
+
+	return &results, nil
 }

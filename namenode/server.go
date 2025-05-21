@@ -109,6 +109,11 @@ func handleConnection(conn net.Conn) {
 		if err := health.Health(conn, reader); err != nil {
 			logger.ErrorLogger.Println(err)
 		}
+	case "GETALL":
+		if err := handleGetAllRequest(ctx, conn, reader, mongoRepo); err != nil {
+			logger.ErrorLogger.Println(err)
+		}
+
 	default:
 		logger.ErrorLogger.Printf("Request Type : {%s} not found\n", requestType)
 	}
@@ -202,6 +207,31 @@ func handlePostRequest(ctx context.Context, conn net.Conn, reader *bufio.Reader,
 		return err
 	}
 
+	return nil
+}
+
+func handleGetAllRequest(ctx context.Context, conn net.Conn, reader *bufio.Reader, repo *database.MongoRepository) error {
+	defer conn.Close()
+	user, err := reader.ReadString('\n')
+	if err != nil {
+		return fmt.Errorf("ERROR: Failed to read the username: %v", err)
+	}
+	// Now what we have to do we have to send that request to the service handler ok.
+
+	user = strings.TrimSpace(user)
+
+	data, err := service.FetchUserSpecificMetaData(ctx, user, repo)
+	if err != nil {
+		return err
+	}
+
+	// Now we need to encode the data with the help of gob encoder.
+	encoder := gob.NewEncoder(conn)
+	if err := encoder.Encode(&data); err != nil {
+		return fmt.Errorf("ERROR: Failed to encode the data: %v", err)
+	}
+
+	logger.InfoLogger.Println("Data sent successfully.")
 	return nil
 }
 
