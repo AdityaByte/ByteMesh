@@ -213,7 +213,7 @@ func main() {
 				logger.InfoLogger.Println("Iteration:", i, "Chunk ID:", chunk.Id, "Data Length:", len(chunk.Data))
 			}
 
-			if err := coordinator.SendChunks(chunks, filename, filesize); err != nil {
+			if err := coordinator.SendChunks(chunks, filename, filesize, ""); err != nil {
 				utils.RemoveFile(file.Name())
 				logger.ErrorLogger.Fatalf("%v\n", err)
 			}
@@ -224,7 +224,7 @@ func main() {
 		}
 
 		if *fileName != "" {
-			if err := client.Download(*fileName); err != nil {
+			if _, err := client.Download(*fileName); err != nil {
 				logger.ErrorLogger.Fatalf("%v\n", err)
 			}
 		}
