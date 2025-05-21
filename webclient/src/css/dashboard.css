@@ -121,6 +121,7 @@ body {
     width: 100%;
     display: flex;
     justify-content: space-evenly;
+    gap: 30px;
     background-color: rgba(255, 255, 255, 0.1);
     box-sizing: border-box;
     padding: 9px 0px;

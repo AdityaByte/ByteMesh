@@ -51,6 +51,8 @@ document.addEventListener('DOMContentLoaded', function (event) {
                         if (token) {
                             let trimmedToken = token.replace("Bearer ", "");
                             localStorage.setItem("token", trimmedToken)
+                            // Also need to set the client username too.
+                            localStorage.setItem("user", username)
                             window.location.href = "/webclient/src/dashboard.html"
                         } else {
                             throw new Error("Authorization header missing!")
