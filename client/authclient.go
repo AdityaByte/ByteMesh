@@ -116,6 +116,8 @@ func LogIn(username string, password string) error {
 			return fmt.Errorf("ERROR: Failed to create the  token file %v", err)
 		}
 
+		defer file.Close()
+
 		// Now we need to write the content
 		if _, err := file.WriteString(tokenString); err != nil {
 			return fmt.Errorf("ERROR: Failed to write the tokenstring locally %v", err)
@@ -126,6 +128,8 @@ func LogIn(username string, password string) error {
 		if err != nil {
 			return fmt.Errorf("ERROR: Failed to create the .cred file %v", err)
 		}
+
+		defer file2.Close()
 
 		// Now we need to write the content
 		if _, err := file2.WriteString(username); err != nil {
