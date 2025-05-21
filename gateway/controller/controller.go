@@ -18,6 +18,15 @@ import (
 
 // It handles the upload request ok.
 func UploadController(w http.ResponseWriter, r *http.Request) {
+
+	// Here we need to read the header too.
+	user := r.URL.Query().Get("user")
+	user = strings.TrimSpace(user)
+	if user == "" {
+		http.Error(w, "User not found", http.StatusBadRequest)
+		return
+	}
+
 	logger.InfoLogger.Println("Request {Upload} Recieved")
 	// Here we need to fetch the file which was sent by the client.
 	if r.Method != http.MethodPost {
@@ -32,6 +41,7 @@ func UploadController(w http.ResponseWriter, r *http.Request) {
 	}
 
 	file, fileHeader, err := r.FormFile("file")
+	logger.InfoLogger.Println("File name:", fileHeader.Filename)
 
 	if err != nil {
 		http.Error(w, "Error retrieving file from form "+err.Error(), http.StatusBadRequest)
@@ -53,6 +63,8 @@ func UploadController(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	defer localFile.Close()
+
 	_, err = io.Copy(localFile, file)
 	if err != nil {
 		http.Error(w, "Failed to copy the content "+err.Error(), http.StatusInternalServerError)
@@ -68,11 +80,15 @@ func UploadController(w http.ResponseWriter, r *http.Request) {
 		logger.ErrorLogger.Fatalf("%v\n", err)
 	}
 
+	logger.InfoLogger.Printf("Filename after chunking: %s\n", filename)
+
 	for i, chunk := range *chunks {
 		logger.InfoLogger.Println("Iteration:", i, "Chunk ID:", chunk.Id, "Data Length:", len(chunk.Data))
 	}
 
-	if err := coordinator.SendChunks(chunks, filename, filesize); err != nil {
+	if err := coordinator.SendChunks(chunks, fileHeader.Filename, filesize, user); err != nil {
+		logger.InfoLogger.Println("this block runs :<<")
+		logger.ErrorLogger.Println(err)
 		utils.RemoveFile(localFile.Name())
 		logger.ErrorLogger.Fatalf("%v\n", err)
 	}
@@ -98,34 +114,28 @@ func DownloadController(w http.ResponseWriter, r *http.Request) {
 	// If i gets the request i need to deserialize the details ok.
 	// The client sends the request with the username and the filename he had to fetch.
 	filename := r.URL.Query().Get("filename")
-	_ = r.URL.Query().Get("user")
+	user := r.URL.Query().Get("user")
+
+	logger.InfoLogger.Println("Download request by:", user)
 
 	filename = strings.TrimSpace(filename)
 
 	//Once the data has been deserailized we need to fetch it ok.
-	if err := client.Download(filename); err != nil {
+	data, err := client.Download(filename)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// If it fetched out the file we just need to read it from the download folder and sent back to the client.
-
-	filePath := "../../storage/" + filename
-	// Here we need to fetch the file.
-	file, err := os.Open(filePath)
-	if err != nil {
-		http.Error(w, "Failed not found "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	defer file.Close()
+	// Instead of direct downloading the file we could also copy the
 
 	// Here we have to set the headers
 	w.Header().Set("Content-Disposition", "attachment; filename=\""+filename+"\"")
 	w.Header().Set("Content-Type", "application/octet-stream")
 
-	if _, err := io.Copy(w, file); err != nil {
-		http.Error(w, "Failed to copy the data "+err.Error(), http.StatusInternalServerError)
+	// Now We need to send the data to the network frontend.
+	if _, err := w.Write(*data); err != nil {
+		http.Error(w, "Failed to write the data", http.StatusInternalServerError)
 		return
 	}
 
@@ -166,9 +176,9 @@ func FetchController(w http.ResponseWriter, r *http.Request) {
 
 	for _, data := range *response {
 		allData = append(allData, Data{
-			Filename: data.Filename+"."+data.FileExtension,
+			Filename:   data.Filename + "." + data.FileExtension,
 			UploadDate: data.UploadDate,
-			Size: data.ActualSize,
+			Size:       data.ActualSize,
 		})
 	}
 
