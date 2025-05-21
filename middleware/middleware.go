@@ -144,3 +144,49 @@ func GetChunks(filename string) (*[]byte, error) {
 
 	return recievedFileData, nil
 }
+
+// Since creating connection with the namenode server and fetching all files could be done through the middleware too.
+func FetchUserFiles(user string) (*[]models.MetaData, error) {
+	// Here we need to create the TCP connection with the namenode server.
+	conn, err := net.Dial("tcp", nameNode)
+	if err != nil {
+		return nil, fmt.Errorf("ERROR: Failed to create a connection %v", err)
+	}
+
+	defer func(){
+		if err := conn.Close(); err != nil {
+			logger.ErrorLogger.Println("ERROR: Failed to close the connection: %v", err)
+		}
+	}()
+
+	// Structure of request
+	/*
+	Request Type: GET
+	OWNER: OWNER_INFO
+	EOF
+	*/
+
+	// Now we need to prepare the request and sen't it to the namenode server.
+	writer := bufio.NewWriter(conn)
+
+	// Here we have to write the connection ok right now i am not changing anything just making another verb for fetching out the request ok.
+	if _, err := writer.WriteString("GETALL\n"+ strings.TrimSpace(user) + "\n"); err != nil { // GETALL is the request for fetching out all user specific metadata ok.
+		return nil, fmt.Errorf("ERROR: Failed to write the request: %v", err)
+	}
+
+	if err := writer.Flush(); err != nil {
+		return nil, fmt.Errorf("ERROR: Failed to flush the data: %v", err)
+	}
+
+	// Now what we need to do we need to fetch out the response that was sent by the server
+
+	decoder := gob.NewDecoder(conn)
+	var response []models.MetaData
+	if err := decoder.Decode(&response); err != nil {
+		return nil, fmt.Errorf("ERROR: Failed to decode the data: %v", err)
+	}
+
+	// If everything goes correctly we can return the thing now
+	logger.InfoLogger.Println("Data decoded successfully")
+	return &response, nil
+}

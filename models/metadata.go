@@ -1,8 +1,12 @@
 package models
 
+import "time"
+
 type MetaData struct {
-	Filename string
+	Owner         string
+	Filename      string
 	FileExtension string
-	ActualSize float64
-	Location map[string]string
+	UploadDate    time.Time
+	ActualSize    float64
+	Location      map[string]string
 }

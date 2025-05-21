@@ -8,8 +8,10 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"os"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/AdityaByte/bytemesh/logger"
 	"github.com/AdityaByte/bytemesh/models"
@@ -98,9 +100,23 @@ func SendChunks(chunks *[]models.Chunk, filename string, filesize float64) error
 
 	fmt.Println(fileLocation)
 
+	// Now before sending the chunks we can read the authenticated username.
+	data, err := os.ReadFile("../.auth/.cred")
+	if err != nil {
+		return fmt.Errorf("ERROR: Failed to read the file.")
+	}
+
+	// Else we gets the file data.
+	username := string(data)
+	if utils.CheckEmptyField(username) {
+		return fmt.Errorf("ERROR: Fetched username is empty.")
+	}
+
 	metaData := models.MetaData{
+		Owner:         username,
 		Filename:      name,
 		FileExtension: extension,
+		UploadDate:    time.Now(),
 		ActualSize:    filesize,
 		Location:      fileLocation,
 	}
