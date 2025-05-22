@@ -15,6 +15,8 @@ Stores huge files across multiple nodes — so your data is safe, accessible, an
 
 ## Overview
 
+![Bytemesh webclient and Bytemesh CLI](webclient/assets/Bytemesh-video.gif)
+
 <hr>
 
 ## Project Structure
