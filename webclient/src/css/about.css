@@ -1,0 +1,94 @@
+@import url('https://fonts.googleapis.com/css2?family=Poetsen+One&family=Great+Vibes');
+
+@font-face {
+    font-family: 'Gilroy';
+    src: url("../../assets/fonts/Gilroy-Bold.ttf") format('truetype');
+    font-weight: bold;
+    font-style: normal;
+}
+
+body {
+    margin: 0;
+    /* overflow: hidden; */
+    height: 100vh;
+    position: relative;
+}
+
+#particles-js {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    z-index: 0;
+}
+
+#particles-js canvas {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+}
+
+.container {
+    position: relative;
+    color: white;
+    z-index: 1;
+    min-height: 100vh;
+    pointer-events: none;
+    font-family: Gilroy;
+    box-sizing: border-box;
+    padding: 2rem 12rem;
+}
+
+.container > * {
+    pointer-events: auto;
+}
+
+.container #back-btn {
+    display: inline-block;
+    margin-bottom: 2rem;
+    padding: 0.6rem 1.4rem;
+    background-color: rgba(255, 255, 255, 0.05);
+    color: white;
+    font-weight: bold;
+    font-size: 1rem;
+    text-decoration: none;
+    border-radius: 8px;
+    border: 1.5px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(4px);
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    pointer-events: auto;
+    cursor: pointer;
+}
+
+.container #back-btn:hover {
+    color: #16213e;
+    background-color: #ffffff;
+    border-color: #ffffff;
+    transform: translateY(-2px);
+    text-decoration: none;
+}
+
+.container h1 {
+    font-size: 5ch;
+}
+
+.container p {
+    font-size: 2ch;
+}
+
+.container ul {
+    font-size: 2ch;
+    margin: 10px 0px;
+}
+
+.container .architecture {
+    width: 100%;
+    height: 100vh;
+    background-image: url("../../assets/webclient-bytemesh-architecture.png");
+    background-size: contain;
+    background-position: center;
+    border-radius: 2rem;
+    background-repeat: no-repeat;
+    background-color: rgb(225, 233, 236);
+}

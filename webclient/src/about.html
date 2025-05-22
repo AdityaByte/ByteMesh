@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About</title>
+    <link rel="stylesheet" href="css/about.css">
+</head>
+
+<body>
+    <div id="particles-js"></div>
+    <div class="container">
+        <button id="back-btn">Back</button>
+        <h1> 💻 Bytemesh Web Client</h1>
+        <p>
+            The <strong>ByteMesh Web Client</strong> is a modern frontend interface that allows users to easily interact
+            with the ByteMesh Distributed File System. Built with web technologies, it provides a simple and intuitive
+            way to:
+        </p>
+        <ul>
+            <li>Upload, download, and view stored files</li>
+            <li>Authenticate users securely with JWT</li>
+            <li>Visualize system architecture</li>
+        </ul>
+        <h1> 💡 System architecture</h1>
+        <div class="architecture">
+
+        </div>
+    </div>
+</body>
+<script>
+    const backBtn = document.querySelector("#back-btn")
+    backBtn.addEventListener("click", function (event) {
+        event.preventDefault()
+        window.location.href = "index.html"
+    })
+</script>
+<script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+<script src="js/particles.js"></script>
+
+</html>
