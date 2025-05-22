@@ -4,6 +4,12 @@ document.addEventListener('DOMContentLoaded', function () {
     const backendApiUrl = "http://localhost:8080"
     const loginForm = document.querySelector("#login-form")
     const signupForm = document.querySelector("#signup-form")
+    const backBtn = document.querySelector("#back-btn")
+
+    backBtn.addEventListener("click", function(event) {
+        event.preventDefault()
+        window.history.back() // For going back to the previous page
+    })
 
     loginForm.addEventListener("submit", async function (event) {
         event.preventDefault()

@@ -222,7 +222,7 @@ const logoutHandler = async (event) => {
     localStorage.removeItem("user")
     localStorage.removeItem("token")
     localStorage.removeItem("content")
-    window.location.href = "/webclient/src/index.html"
+    window.history.back()
 }
 
 // Switching to Home
