@@ -31,3 +31,8 @@ go.work.sum
 .env
 Makefile
 .auth/
+
+# UI Tests files
+__pycache__/
+.pytest_cache/
+*.pyc
