@@ -1,4 +1,4 @@
-# ByteMesh
+# 🚀 ByteMesh
 
 <img src="webclient/assets/bytemesh-logo.png" width="300px">
 
@@ -8,18 +8,19 @@ Stores huge files across multiple nodes — so your data is safe, accessible, an
 
 <hr>
 
-## Architecture
+## 🧠 Architecture
 <img src="webclient/assets/webclient-bytemesh-architecture.png">
 
 <hr>
 
-## Overview
+## 👀 Overview
 
-[![Watch the demo](https://img.youtube.com/vi/LSwUGCxp6Bo/hqdefault.jpg)](https://youtu.be/LSwUGCxp6Bo)
+**[▶️ Watch the project](https://youtu.be/LSwUGCxp6Bo)**
+
 
 <hr>
 
-## Project Structure
+## 📁 Project Structure
 
 ```bash
 .
