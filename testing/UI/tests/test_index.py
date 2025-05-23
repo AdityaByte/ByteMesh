@@ -1,7 +1,7 @@
 from pages.index_page import IndexPage
 
 # Writing tests for the index page ok.
-def test_index_success(driver):
+def test_index(driver):
     # Getting the webpage
     driver.get("http://localhost:5501/webclient/src/index.html")
     # Here we have to create an object of the page model that we have created.
