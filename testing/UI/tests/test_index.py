@@ -1,14 +1,16 @@
 from pages.index_page import IndexPage
+from os import getenv
 
 # Writing tests for the index page ok.
 def test_index(driver):
     # Getting the webpage
-    driver.get("http://localhost:5501/webclient/src/index.html")
+    # driver.get("http://localhost:5501/webclient/src/index.html")
+    driver.get(getenv('WEBCLIENT_URL'))
     # Here we have to create an object of the page model that we have created.
     index_page = IndexPage(driver)
     # Now what we have to do we have to just check it out some tests.
     assert index_page.get_title() == "ByteMesh webclient"
-    assert index_page.get_logo_img_src() == "http://localhost:5501/webclient/assets/bytemesh-logo.png"
+    assert index_page.get_logo_img_src() == "http://localhost:5501/assets/bytemesh-logo.png"
 
     assert index_page.get_logo_text() == "ByteMesh."
 

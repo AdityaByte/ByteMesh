@@ -2,6 +2,7 @@ import pytest
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
+from dotenv import load_dotenv # Library for loading the .env file.
 
 # Config method for loading the driver.
 @pytest.fixture(scope="session") # Session cause we are only kept one browser for each test request.
@@ -20,3 +21,7 @@ def driver():
     yield driver # Returning the driver to all tests.
 
     driver.quit() # Shuts down after all tests.
+
+# Pytest will automatically call it.
+def pytest_configure():
+    load_dotenv(dotenv_path=".env.tests")
