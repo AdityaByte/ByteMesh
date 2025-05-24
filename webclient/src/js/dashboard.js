@@ -23,7 +23,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (!token || token.trim() === "") {
         // In that case alert that u cannot access the pages ok.
         alert("Unauthorized")
-        window.location.href = "auth.html"
+        window.location.href = "/auth"
         return
     }
 
