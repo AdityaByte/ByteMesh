@@ -7,12 +7,12 @@ document.addEventListener("DOMContentLoaded", function () {
     logout.addEventListener("click", logoutHandler)
 
     content = localStorage.getItem("content")
-    if (content === "main-content") {
-        document.querySelector(".main-content").style.display = "flex"
-        document.querySelector(".upload-content").style.display = "none"
-    } else {
+    if (content === "upload-content") {
         document.querySelector(".main-content").style.display = "none"
         document.querySelector(".upload-content").style.display = "flex"
+    } else {
+        document.querySelector(".main-content").style.display = "flex"
+        document.querySelector(".upload-content").style.display = "none"
     }
 
     homeSwitchingBtn.addEventListener("click", switchToHome)
@@ -110,6 +110,18 @@ document.addEventListener("DOMContentLoaded", function () {
             });
         })
         .catch(error => {
+            const fileList = document.querySelector(".file-list")
+            let element = fileList.querySelector("h1")
+            if (element === null) {
+                element = document.createElement("h1")
+                element.textContent = error.message
+                element.style.textAlign = "center"
+                fileList.style.justifyContent = "center"
+                fileList.style.alignItems = "center"
+                fileList.appendChild(element)
+            } else if (element !== null){
+                element.textContent = error.message
+            }
             console.error(error)
         })
 
