@@ -62,7 +62,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 token = token.replace("Bearer ", "")
                 localStorage.setItem("token", token)
                 localStorage.setItem("user", username)
-                window.location.href = "/webclient/src/dashboard.html"
+                window.location.href = "/dashboard"
             })
             .catch((error) => {
                 info.textContent = error.message
