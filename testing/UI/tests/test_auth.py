@@ -1,9 +1,11 @@
 from pages.auth_page import AuthPage
+from os import getenv
 
 # This test is only for UI test it doesn't tests login and signup functionality.
 def test_auth(driver):
     # Loads the authentication page.
-    driver.get("http://localhost:5501/webclient/src/auth.html")
+    # driver.get("http://localhost:5501/webclient/src/auth.html") # Old way
+    driver.get(f"{getenv('WEBCLIENT_URL')}/auth")
 
     # Creating object of AuthPage
     auth_page = AuthPage(driver)

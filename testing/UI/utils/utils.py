@@ -3,7 +3,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 
 class BasePage:
-    def __init__(self, driver, timeout=6):
+    def __init__(self, driver, timeout=10):
         self.driver = driver
         self.timeout = timeout
 
