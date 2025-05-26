@@ -106,12 +106,31 @@ Stores huge files across multiple nodes — so your data is safe, accessible, an
 │   │   └── /js                ⚙️ Scripts
 │   └── /assets                🖼️ Images, fonts, icons
 
-└── /gateway                🚪 API Gateway between WebClient & Datanodes
-    ├── server.go
-    ├── /controller          📥 Handles upload/download requests
-    │   └── controller.go
-    └── /middleware          🌐 CORS Middleware
-        └── cors.go
+├── /gateway                🚪 API Gateway between WebClient & Datanodes
+│   ├── server.go
+│   ├── /controller          📥 Handles upload/download requests
+│   │   └── controller.go
+│   └── /middleware          🌐 CORS Middleware
+│       └── cors.go
+
+└── /testing                🧪 Automated UI testing framework
+    └── /ui                 💻 Page Object Models, tests & utils for UI
+        ├── /pages          📄 Individual page objects representing UI elements
+        │   ├── about_page.py
+        │   ├── auth_page.py
+        │   ├── dashboard_page.py
+        │   ├── index_page.py
+        ├── /tests          ✔️ Test cases using page objects & utils
+        │   ├── test_about.py
+        │   ├── test_auth.py
+        │   ├── test_dashboard.py
+        │   ├── test_index.py
+        │   ├── test_login.py
+        │   ├── test_signup.py
+        ├── /utils          🔧 Utility functions/helpers for tests
+        │   └── utils.py
+        └── conftest.py     🐍 Pytest fixtures & WebDriver configuration
+
 ```
 
 ## ⚙️ Setup
@@ -160,12 +179,6 @@ Navigate to each Go service folder and run:
 go mod tidy
 ```
 
-#### 🔹 Node Modules (for Web Client)
-```bash
-cd webclient
-npm install
-```
-
 ### 🛠️ Start the Services
 You can run each service manually like this:
 ```bash
@@ -187,7 +200,7 @@ go run .
 
 # Run Web Client (Optional)
 cd ../webclient
-npx live-server src
+node server.js
 ```
 Or just use the 🧙‍♂️ auto-launch script below ⬇️
 ```bash
@@ -281,6 +294,7 @@ http://localhost:5500
  ![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)
  ![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white)
  ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
+ ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
  ![Bash](https://img.shields.io/badge/Bash-4EAA25?style=for-the-badge&logo=gnubash&logoColor=white)
  ![Makefile](https://img.shields.io/badge/Makefile-3776AB?style=for-the-badge&logo=gnu&logoColor=white)
  ![BAT File](https://img.shields.io/badge/BAT%20File-000000?style=for-the-badge&logo=windows&logoColor=white)
