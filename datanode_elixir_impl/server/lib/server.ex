@@ -11,6 +11,6 @@ defmodule Server.Application do
     ]
 
     opts = [strategy: :one_for_one, name: DataNode.Supervisor]
-    Supervisor.init(children, opts)
+    Supervisor.start_link(children, opts)
   end
 end

@@ -1,5 +1,4 @@
 defmodule DataNode.Server do
-  alias ElixirLS.LanguageServer.Providers.Completion.Reducers.Struct
   use GenServer
 
   def start_link(data) do
@@ -32,7 +31,7 @@ defmodule DataNode.Server do
       {:ok, socket} ->
         IO.puts("Connected to the server successfully")
         # Now we need to send the registration request so that our node would be registered.
-        GenServer.call(__MODULE__, :register)
+        handle_call(:register, :ok, socket)
         {:ok, socket}
 
       {:error, reason} ->
@@ -43,50 +42,65 @@ defmodule DataNode.Server do
 
   @impl true
   def handle_call(:register, _from, socket) do
-    {:ok, {ip, port}} = :inet.sockname(socket)
 
-    node_info = %DataNode.Struct.Node{
-      req_type: "REGISTER",
-      name: System.get_env("NAME"),
-      port: port
-    }
-
-    json_node_info = JSON.encode!(node_info)
-
-    case :gen_tcp.send(socket, json_node_info) do
+    # Firstly i need to send the HEALTH Verb that the request is of the health request.
+    case :gen_tcp.send(socket, "REGISTER\n") do
       :ok ->
-        IO.puts("Node registered successfully")
-        # Now We need to send the heartbeat and accepts the further requests.
-        send(self(), :heartbeat)
-        send(self(), :req)
-        {:reply, :ok, socket}
+
+        {:ok, {_ip, port}} = :inet.sockname(socket)
+        node_info = %DataNode.Struct.Node{
+          name: System.get_env("NAME"),
+          port: port
+        }
+
+        json_node_info = JSON.encode!(node_info)
+
+        case :gen_tcp.send(socket, json_node_info) do
+          :ok ->
+            IO.puts("Node registered successfully")
+            # Now We need to send the heartbeat and accepts the further requests.
+            send(self(), :heartbeat)
+            send(self(), :req)
+            {:reply, :ok, socket}
+
+          {:error, reason} ->
+            IO.puts("Failed to register the node, #{inspect(reason)}")
+            {:reply, {:error, reason}, socket}
+        end
 
       {:error, reason} ->
-        IO.puts("Failed to register the node, #{inspect(reason)}")
-        # Crashing the process.
-        raise "Registration Failed: #{inspect(reason)}"
+        IO.puts("Failed to send the Register request, #{inspect(reason)}")
+        {:reply, {:error, reason}, socket}
+
     end
   end
 
   @impl true
   def handle_cast(:heartbeat, socket) do
-    heartbeat = %DataNode.Struct.HeartBeat{
-      req_type: "HEARTBEAT",
-      node_name: "datanode-1",
-      # Timestamp
-      timestamp: DateTime.utc_now() |> DateTime.to_unix()
-    }
 
-    json_encoded_data = JSON.encode!(heartbeat)
-
-    case :gen_tcp.send(socket, json_encoded_data) do
+    case :gen_tcp.send(socket, "HEALTH\n") do
       :ok ->
-        Process.send_after(self(), :heartbeat, 3000)
-        {:noreply, socket}
+        heartbeat = %DataNode.Struct.HeartBeat{
+          node_name: "datanode-1",
+          # Timestamp
+          timestamp: DateTime.utc_now() |> DateTime.to_unix()
+        }
 
+        json_encoded_data = JSON.encode!(heartbeat)
+
+        case :gen_tcp.send(socket, json_encoded_data) do
+          :ok ->
+            Process.send_after(self(), :heartbeat, 3000)
+            {:noreply, socket}
+
+          {:error, reason} ->
+            IO.inspect("Failed to send the heartbeat #{inspect(reason)}")
+        end
       {:error, reason} ->
-        IO.inspect("Failed to send the heartbeat #{inspect(reason)}")
+        IO.puts("Failed to send the Health request, #{inspect(reason)}")
     end
+
+    {:noreply, socket}
   end
 
   @impl true
@@ -105,7 +119,7 @@ defmodule DataNode.Server do
                   {:ok, data} ->
                     response = %DataNode.Struct.Response{
                       type: "SUCCESS",
-                      message: binary_data
+                      message: data
                     }
 
                     case :gen_tcp.send(socket, JSON.encode!(response)) do
@@ -218,7 +232,7 @@ defmodule DataNode.Server do
     filename = data.file_name
     chunkid = data.chunk_id
 
-    file_path = Path.join("storage", filename, chunkid)
+    file_path = Path.join(["storage", filename, chunkid])
 
     case File.read(file_path) do
       {:ok, data} ->
@@ -265,6 +279,7 @@ defmodule DataNode.Server do
 
             {:error, reason} ->
               IO.puts("Failed to write the temporary file")
+              {:error, reason}
           end
 
         {:error, reason} ->
