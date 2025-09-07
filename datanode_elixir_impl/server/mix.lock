@@ -1,0 +1,3 @@
+%{
+  "envy": {:hex, :envy, "1.1.1", "0bc9bd654dec24fcdf203f7c5aa1b8f30620f12cfb28c589d5e9c38fe1b07475", [:mix], [], "hexpm", "7061eb1a47415fd757145d8dec10dc0b1e48344960265cb108f194c4252c3a89"},
+}
