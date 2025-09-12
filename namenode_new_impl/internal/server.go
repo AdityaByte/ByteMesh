@@ -1,16 +1,21 @@
+// Package internal provides utilities for managing metadata.
 package internal
 
 import (
 	"bufio"
 	"context"
+	"encoding/gob"
 	"encoding/json"
 	"fmt"
 	"net"
 	"strings"
 	"time"
 
+	"github.com/AdityaByte/namenode/internal/database"
 	"github.com/AdityaByte/namenode/internal/handler"
+	"github.com/AdityaByte/namenode/internal/model"
 	"github.com/AdityaByte/namenode/internal/payloads"
+	"github.com/AdityaByte/namenode/logger"
 )
 
 var DataNodes *payloads.RegisteredDataNodes
@@ -53,22 +58,23 @@ func (server *Server) acceptConnection() {
 	}
 }
 
+// handleConnection handle coordinator incoming requests and returns a response.
 func handleConnection(conn net.Conn) {
 
 	reader := bufio.NewReader(conn)
 
 	// Properly closing the resource at the end.
 	// Not closing the connection cause of implementing the connection pool.
-	// defer func() {
-	// 	if err := conn.Close(); err != nil {
-	// 		logger.ErrorLogger.Println("Failed to close connection %v\n", err)
-	// 	}
-	// }()
+	defer func() {
+		if err := conn.Close(); err != nil {
+			logger.ErrorLogger.Println("Failed to close connection %v\n", err)
+		}
+	}()
 
 	ctx, cancel := context.WithTimeout(context.TODO(), time.Second*30)
 	defer cancel()
 
-	mongoRepo, err := LoadMongoRepository()
+	mongoRepo, err := database.LoadMongoRepository()
 	if err != nil {
 		logger.ErrorLogger.Println(err)
 		return
@@ -88,6 +94,7 @@ func handleConnection(conn net.Conn) {
 	logger.InfoLogger.Println("Request Verb:", requestVerb)
 
 	switch requestVerb {
+
 	case "REGISTER":
 		// Calling the Registration Handler method.
 		decoder := json.NewDecoder(conn)
@@ -107,6 +114,7 @@ func handleConnection(conn net.Conn) {
 			return
 		}
 		handler.HeartBeatHandler(DataNodes, heartbeat)
+
 	case "GET":
 		// Request is being sent by the coordinator.
 		// Get request usually has a filename.
@@ -120,31 +128,50 @@ func handleConnection(conn net.Conn) {
 			logger.ErrorLogger.Println("Empty filename recieved")
 			return
 		}
-		data, err := handler.HandleGetRequest(ctx, mongoRepo, DataNodes, fullFileName)
+
+		final_metadata, err := handler.HandleGetRequest(ctx, *mongoRepo, DataNodes, fullFileName)
 		if err != nil {
 			logger.ErrorLogger.Println(err.Error())
 			return
 		}
 
-		// At the end when we gets the data we are just forwarding it to the client.
-		// Before that I need to send the length of the data too.
-		lengthofData := fmt.Sprintf("Data_Length=%d\n", len(data))
-
-		// Now we are sending the data length to string format.
-		if _, err := conn.Write([]byte(lengthofData)); err != nil {
-			logger.ErrorLogger.Printf("Failed to send the data to coordinator, %v\n", err)
+		// Encoding and sending the metadata as a go binary object.
+		encoder := gob.NewEncoder(conn)
+		if err := encoder.Encode(&final_metadata); err != nil {
+			logger.ErrorLogger.Printf("Failed to encode the metadata payload, %v\n", err)
 			return
 		}
 
-		// Now I have to send the actual data.
-		if _, err := conn.Write(data); err != nil {
-			logger.ErrorLogger.Printf("Failed to send the data to coordinator, %v\n", err)
-			return
-		}
-
-		// That's all I have to do in that Get case.
+		logger.InfoLogger.Println("Metadata sents successfully.")
 
 	case "POST":
+
+		var metadata model.MetaData
+
+		decoder := gob.NewDecoder(conn)
+		if err := decoder.Decode(&metadata); err != nil {
+			logger.ErrorLogger.Printf("Failed to decode the data, %v\n", err)
+		}
+
+		ctx, cancel := context.WithTimeout(context.TODO(), time.Second*15)
+		defer cancel()
+
+		if err := handler.HandlePostRequest(ctx, mongoRepo, metadata); err != nil {
+			logger.ErrorLogger.Println(err.Error())
+		}
+
+		logger.InfoLogger.Println("Metadata inserted successfully to the database")
+
+	case "HEALTH":
+		aliveNodes := handler.GetAliveNodes(*DataNodes)
+
+		encoder := gob.NewEncoder(conn)
+		if err := encoder.Encode(&aliveNodes); err != nil {
+			logger.ErrorLogger.Printf("Failed to encode and send the Helath query of datanodes, %v", err)
+			return
+		}
+
+		logger.InfoLogger.Println("Health information of datanodes sent successfully.")
 
 	default:
 		logger.ErrorLogger.Printf("Request Verb : {%s} not found\n", requestVerb)

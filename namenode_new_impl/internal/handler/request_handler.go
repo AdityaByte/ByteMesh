@@ -2,15 +2,12 @@ package handler
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"math"
-	"net"
 	"path/filepath"
-	"sort"
+	"strings"
 	"time"
 
-	"github.com/AdityaByte/namenode/internal"
+	"github.com/AdityaByte/namenode/internal/database"
 	"github.com/AdityaByte/namenode/internal/model"
 	"github.com/AdityaByte/namenode/internal/payloads"
 	"go.mongodb.org/mongo-driver/bson"
@@ -22,7 +19,7 @@ var aliveNodeThreshold = 30 // 30 seconds
 The main logic of fetching out the file data from different datanodes resides here.
 The fault tolerant system logic also resides here.
 */
-func HandleGetRequest(ctx context.Context, mongoRepo internal.MongoRepository, datanodes *payloads.RegisteredDataNodes, fullFileName string) ([]byte, error) {
+func HandleGetRequest(ctx context.Context, mongoRepo database.MongoRepository, datanodes *payloads.RegisteredDataNodes, fullFileName string) (*payloads.MetaData, error) {
 
 	// Seperating the extension and the filename
 	fileExtension := filepath.Ext(fullFileName)
@@ -40,86 +37,138 @@ func HandleGetRequest(ctx context.Context, mongoRepo internal.MongoRepository, d
 		return nil, fmt.Errorf("No file exists of name: %s", fullFileName)
 	}
 
-	var metaData *model.MetaData
-	if err := data.Decode(&metaData); err != nil {
+	var metadata model.MetaData
+	if err := data.Decode(&metadata); err != nil {
 		return nil, fmt.Errorf("Failed to decode the data, %v", err)
 	}
 
-	// Now we have to use the existing connection pool connection and fetch the data chunks.
-	var keys []string
+	// Here we need to check the nodes availability too.
+	aliveDataNodes := checkNodeAvailiability(metadata, *datanodes)
 
-	for k := range metaData.Location {
-		keys = append(keys, k)
+	payload_metadata := payloads.MetaData{
+		Filename:      metadata.Filename,
+		FileExtension: metadata.FileExtension,
+		ActualSize:    metadata.ActualSize,
+		Location:      metadata.Location,
+		AliveNodes:    aliveDataNodes,
 	}
 
-	sort.Strings(keys)
-
-	var final_file_data []byte
-
-	for _, key := range keys {
-		node := metaData.Location[key]
-		conn := mapDataNodeandCheckAlive(node, *datanodes)
-		if conn == nil {
-			return nil, fmt.Errorf("Node name: %s is not alive", node)
-		}
-		// Implement the else replication after some time.
-		// If the connection is alive then we have to send the get request to the node.
-
-		// Sending the request verb first.
-		_, err := conn.Write([]byte("GET\n"))
-		if err != nil {
-			return nil, fmt.Errorf("Failed to write the data to the datanode, %v", err)
-		}
-
-		// Now we need to send the json payload.
-		get_request_payload := payloads.GetRequest{
-			FileName: filename,
-			ChunkId:  key,
-		}
-
-		// Now we need to send that over the network.
-		encoded_json_data, err := json.Marshal(get_request_payload)
-		if err != nil {
-			return nil, fmt.Errorf("Failed to encode the data to json, %v", err)
-		}
-
-		if _, err := conn.Write(encoded_json_data); err != nil {
-			return nil, fmt.Errorf("Failed to send the data to the datanode, %v", err)
-		}
-
-		// Now we need to recieve the data.
-		decoder := json.NewDecoder(conn)
-
-		var chunk payloads.Chunk
-		if err := decoder.Decode(&chunk); err != nil {
-			return nil, fmt.Errorf("Failed to decode the json data, %v", err)
-		}
-
-		// Since we decode the data we have to just add the byte data
-		final_file_data = append(final_file_data, chunk.Data...)
-	}
-
-	// If everything goes correctly we gets the data.
-
-	// Now have to check the length of the data is correct or not.
-	if len(final_file_data) != int(math.Round(metaData.ActualSize)) {
-		return nil, fmt.Errorf("Corrupted data reciecved")
-	}
-
-	return final_file_data, nil
+	return &payload_metadata, nil
 }
 
-// This function ususally takes name of the DataNode.
-// And it returns the connection and also checks that it is alive or not.
-func mapDataNodeandCheckAlive(nodeName string, datanodes payloads.RegisteredDataNodes) (conn net.Conn) {
-	for _, node := range datanodes.Nodes {
-		if nodeName == node.Name {
-			// Then we have to check that it is alive or not.
-			currentTimeStamp := time.Now().Unix()
+func checkNodeAvailiability(metadata model.MetaData, allNodes payloads.RegisteredDataNodes) payloads.RegisteredDataNodes {
+	// Just need to check the nodes that do exists in the chunk location they are alive or not.
+	var aliveNodes payloads.RegisteredDataNodes
+
+	// Node for fast lookup.
+	nodeMap := make(map[string]payloads.DataNode)
+	for _, node := range allNodes.Nodes {
+		nodeMap[node.Name] = node
+	}
+
+	// seen tracking duplicates.
+	seen := make(map[string]bool)
+
+	currentTimeStamp := time.Now().Unix()
+
+	for _, value := range metadata.Location {
+		if seen[value] {
+			continue
+		}
+
+		seen[value] = true
+
+		if node, exists := nodeMap[value]; exists {
 			if currentTimeStamp-node.TimeStamp <= int64(aliveNodeThreshold) {
-				return node.Conn
+				aliveNodes.Nodes = append(aliveNodes.Nodes, node)
+			}
+		}
+	}
+
+	return aliveNodes
+}
+
+func HandlePostRequest(ctx context.Context, mongoRepo *database.MongoRepository, metadata model.MetaData) error {
+	if err := emptyFieldsChecker(metadata); err != nil {
+		return err
+	}
+
+	if _, err := mongoRepo.Collection.InsertOne(ctx, metadata); err != nil {
+		return fmt.Errorf("Failed to insert metadata to the database, %v", err)
+	}
+
+	return nil
+}
+
+func emptyFieldsChecker(metadata model.MetaData) error {
+	if strings.TrimSpace(metadata.Filename) == "" {
+		return fmt.Errorf("ERROR: Filename of metadata is empty")
+	} else if strings.TrimSpace(metadata.FileExtension) == "" {
+		return fmt.Errorf("ERROR: FileExtension of metadata is empty")
+	} else {
+		for key, value := range metadata.Location {
+			if strings.TrimSpace(key) == "" || strings.TrimSpace(value) == "" {
+				return fmt.Errorf("ERROR: Location fields cannot be empty")
 			}
 		}
 	}
 	return nil
 }
+
+// checkNodeAvailiablity Takes pre-existed all nodes and check at which time the last heartbeat signal reaches and returns
+// a list of alive nodes.
+// func checkNodeAvailiability(metaData model.MetaData, allNodes payloads.RegisteredDataNodes) (payloads.RegisteredDataNodes) {
+// 	// Just need to check the nodes that do exists in the chunk location they are alive or not.
+// 	var aliveNodes payloads.RegisteredDataNodes
+
+// 	var tempNodeData []string
+
+// 	for _, value := range metaData.Location {
+// 		if !contains(tempNodeData, value) {
+// 			// Now we have to check that the node is alive or not.
+// 			for _, nodeInAliveNode := range allNodes.Nodes {
+// 				if value == nodeInAliveNode.Name {
+// 					currentTimeStamp := time.Now().Unix()
+// 					if currentTimeStamp - nodeInAliveNode.TimeStamp <= int64(aliveNodeThreshold) {
+// 						aliveNodes.Nodes = append(aliveNodes.Nodes, nodeInAliveNode)
+// 					}
+// 				}
+// 			}
+// 			tempNodeData = append(tempNodeData, value)
+// 		}
+// 	}
+
+// 	return aliveNodes
+// }
+
+// func contains(tempNodeData []string, value string) bool {
+
+// 	if len(tempNodeData) == 0 {
+// 		return false
+// 	}
+
+// 	for _, node := range tempNodeData {
+// 		if node == value {
+// 			return true
+// 		}
+// 	}
+// 	return false
+// }
+
+// This function ususally takes name of the DataNode.
+// And it returns the connection and also checks that it is alive or not.
+// func mapDataNodeandCheckAlive(nodeName string, datanodes payloads.RegisteredDataNodes) (payloads.RegisteredDataNodes) {
+// 	var aliveNodes []payloads.DataNode
+// 	for _, node := range datanodes.Nodes {
+// 		if nodeName == node.Name {
+// 			// Then we have to check that it is alive or not.
+// 			currentTimeStamp := time.Now().Unix()
+// 			if currentTimeStamp-node.TimeStamp <= int64(aliveNodeThreshold) {
+// 				aliveNodes = append(aliveNodes, payloads.DataNode{
+// 					Name: nodeName,
+// 				})
+// 			}
+// 		}
+// 	}
+// 	return nil
+// }
