@@ -7,11 +7,15 @@ import (
 )
 
 func NodeRegistrationHandler(conn net.Conn, node *payloads.DataNode, datanodes *payloads.RegisteredDataNodes) {
-	for _, datanode := range datanodes.Nodes {
+	if datanodes == nil {
+		return
+	}
+	for i, datanode := range datanodes.Nodes {
 		if node.Name == datanode.Name {
-			datanode = *node
-		} else {
-			datanodes.Nodes = append(datanodes.Nodes, *node)
+			datanodes.Nodes[i] = *node
+			return
 		}
 	}
+
+	datanodes.Nodes = append(datanodes.Nodes,  *node)
 }

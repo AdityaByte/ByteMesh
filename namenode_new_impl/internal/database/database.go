@@ -27,7 +27,7 @@ func LoadMongoRepository() (*MongoRepository, error) {
 		return nil, fmt.Errorf("Environment variables are empty")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
 	defer cancel()
 
 	clientOptions := options.Client().ApplyURI(uri).SetMaxPoolSize(50).SetMinPoolSize(5).SetServerSelectionTimeout(30 * time.Second).SetSocketTimeout(60 * time.Second).SetConnectTimeout(30 * time.Second)

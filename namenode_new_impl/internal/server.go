@@ -18,7 +18,7 @@ import (
 	"github.com/AdityaByte/namenode/logger"
 )
 
-var DataNodes *payloads.RegisteredDataNodes
+var DataNodes payloads.RegisteredDataNodes
 
 type Server struct {
 	listenAddr string
@@ -54,6 +54,7 @@ func (server *Server) acceptConnection() {
 			logger.ErrorLogger.Println("Error connecting to client", err)
 			return
 		}
+		logger.InfoLogger.Printf("Connected to: %s\n", conn.LocalAddr().String())
 		go handleConnection(conn)
 	}
 }
@@ -77,103 +78,119 @@ func handleConnection(conn net.Conn) {
 	mongoRepo, err := database.LoadMongoRepository()
 	if err != nil {
 		logger.ErrorLogger.Println(err)
-		return
 	}
-
-	requestVerb, err := reader.ReadString('\n')
-	if err != nil {
-		logger.ErrorLogger.Printf("Failed to read the string, %v\n", err)
-		return
-	}
-
-	requestVerb = strings.TrimSpace(requestVerb)
-	if requestVerb == "" {
-		logger.ErrorLogger.Println("Empty request were found")
-	}
-
-	logger.InfoLogger.Println("Request Verb:", requestVerb)
-
-	switch requestVerb {
-
-	case "REGISTER":
-		// Calling the Registration Handler method.
-		decoder := json.NewDecoder(conn)
-		var reg_node *payloads.DataNode
-		if err := decoder.Decode(&reg_node); err != nil {
-			logger.ErrorLogger.Printf("Invalid JSON, %v\n", err)
-			return
-		}
-		handler.NodeRegistrationHandler(conn, reg_node, DataNodes)
-
-	case "HEARTBEAT":
-		// Now we need to decode the heartbeat data.
-		decoder := json.NewDecoder(conn)
-		var heartbeat *payloads.HeartBeat
-		if err := decoder.Decode(&heartbeat); err != nil {
-			logger.ErrorLogger.Printf("Invalid JSON, %v\n", err)
-			return
-		}
-		handler.HeartBeatHandler(DataNodes, heartbeat)
-
-	case "GET":
-		// Request is being sent by the coordinator.
-		// Get request usually has a filename.
-		fullFileName, err := reader.ReadString('\n')
+	for {
+		requestVerb, err := reader.ReadString('\n')
 		if err != nil {
-			logger.ErrorLogger.Printf("Failed to read the filename, %v", err)
-			return
-		}
-		fullFileName = strings.TrimSpace(fullFileName)
-		if fullFileName == "" {
-			logger.ErrorLogger.Println("Empty filename recieved")
+			logger.ErrorLogger.Printf("Failed to read the string, %v\n", err)
 			return
 		}
 
-		final_metadata, err := handler.HandleGetRequest(ctx, *mongoRepo, DataNodes, fullFileName)
-		if err != nil {
-			logger.ErrorLogger.Println(err.Error())
-			return
+		requestVerb = strings.TrimSpace(requestVerb)
+		if requestVerb == "" {
+			logger.ErrorLogger.Println("Empty request were found")
 		}
 
-		// Encoding and sending the metadata as a go binary object.
-		encoder := gob.NewEncoder(conn)
-		if err := encoder.Encode(&final_metadata); err != nil {
-			logger.ErrorLogger.Printf("Failed to encode the metadata payload, %v\n", err)
-			return
+		logger.InfoLogger.Println("Request Verb:", requestVerb)
+
+		switch requestVerb {
+
+		case "REGISTER":
+			// Calling the Registration Handler method.
+			data, err := reader.ReadString('\n')
+			if err != nil {
+				logger.ErrorLogger.Println("Failed to read the node registration data, %v\n", err)
+				return
+			}
+			var reg_node payloads.DataNode
+			if err := json.Unmarshal([]byte(data), &reg_node); err != nil {
+				logger.ErrorLogger.Println("Invalid Json, Failed to unmarshal the node registration data, %v\n", err)
+				return
+			}
+			logger.InfoLogger.Println(reg_node.Name)
+			handler.NodeRegistrationHandler(conn, &reg_node, &DataNodes)
+
+		case "HEARTBEAT":
+			// Now we need to decode the heartbeat data.
+			data, err := reader.ReadString('\n')
+			if err != nil {
+				logger.ErrorLogger.Println("Failed to read the heartbeat data, %v\n", err)
+				return
+			}
+			var heartbeat *payloads.HeartBeat
+			if err := json.Unmarshal([]byte(data), &heartbeat); err != nil {
+				logger.ErrorLogger.Println("Invalid Json, Failed to unmarshal the heartbeat data, %v\n", err)
+				return
+			}
+			handler.HeartBeatHandler(&DataNodes, heartbeat)
+
+		case "GET":
+			// Request is being sent by the coordinator.
+			// Get request usually has a filename.
+			fullFileName, err := reader.ReadString('\n')
+			if err != nil {
+				logger.ErrorLogger.Printf("Failed to read the filename, %v", err)
+				return
+			}
+			fullFileName = strings.TrimSpace(fullFileName)
+			if fullFileName == "" {
+				logger.ErrorLogger.Println("Empty filename recieved")
+				return
+			}
+
+			final_metadata, err := handler.HandleGetRequest(ctx, *mongoRepo, &DataNodes, fullFileName)
+			if err != nil {
+				logger.ErrorLogger.Println(err.Error())
+				return
+			}
+
+			// Encoding and sending the metadata as a go binary object.
+			encoder := gob.NewEncoder(conn)
+			if err := encoder.Encode(&final_metadata); err != nil {
+				logger.ErrorLogger.Printf("Failed to encode the metadata payload, %v\n", err)
+				return
+			}
+
+			logger.InfoLogger.Println("Metadata sents successfully.")
+
+		case "POST":
+
+			var metadata model.MetaData
+			decoder := gob.NewDecoder(reader)
+			if err := decoder.Decode(&metadata); err != nil {
+				logger.ErrorLogger.Printf("Failed to decode the data, %v\n", err)
+			}
+
+			ctx, cancel := context.WithTimeout(context.TODO(), time.Second*15)
+			defer cancel()
+
+			if err := handler.HandlePostRequest(ctx, mongoRepo, metadata); err != nil {
+				logger.ErrorLogger.Println(err.Error())
+				return
+			}
+
+			// Now have to send a response that the metadata has been saved successfully.
+			if _, err := conn.Write([]byte("201\n")); err != nil {
+				logger.ErrorLogger.Printf("Failed to send the response to the coordinator, %v\n", err)
+				return
+			}
+
+			logger.InfoLogger.Println("Metadata inserted successfully to the database")
+
+		case "HEALTH":
+			aliveNodes := handler.GetAliveNodes(DataNodes)
+
+			encoder := gob.NewEncoder(conn)
+			if err := encoder.Encode(&aliveNodes); err != nil {
+				logger.ErrorLogger.Printf("Failed to encode and send the Helath query of datanodes, %v", err)
+				return
+			}
+
+			logger.InfoLogger.Println("Health information of datanodes sent successfully.")
+
+		default:
+			logger.ErrorLogger.Printf("Request Verb : {%s} not found\n", requestVerb)
 		}
-
-		logger.InfoLogger.Println("Metadata sents successfully.")
-
-	case "POST":
-
-		var metadata model.MetaData
-
-		decoder := gob.NewDecoder(conn)
-		if err := decoder.Decode(&metadata); err != nil {
-			logger.ErrorLogger.Printf("Failed to decode the data, %v\n", err)
-		}
-
-		ctx, cancel := context.WithTimeout(context.TODO(), time.Second*15)
-		defer cancel()
-
-		if err := handler.HandlePostRequest(ctx, mongoRepo, metadata); err != nil {
-			logger.ErrorLogger.Println(err.Error())
-		}
-
-		logger.InfoLogger.Println("Metadata inserted successfully to the database")
-
-	case "HEALTH":
-		aliveNodes := handler.GetAliveNodes(*DataNodes)
-
-		encoder := gob.NewEncoder(conn)
-		if err := encoder.Encode(&aliveNodes); err != nil {
-			logger.ErrorLogger.Printf("Failed to encode and send the Helath query of datanodes, %v", err)
-			return
-		}
-
-		logger.InfoLogger.Println("Health information of datanodes sent successfully.")
-
-	default:
-		logger.ErrorLogger.Printf("Request Verb : {%s} not found\n", requestVerb)
 	}
+
 }
