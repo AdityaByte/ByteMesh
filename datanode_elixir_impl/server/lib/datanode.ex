@@ -5,16 +5,16 @@ defmodule DataNode.Server do
     GenServer.start(__MODULE__, data, name: __MODULE__)
   end
 
-  def register_request() do
-    GenServer.call(__MODULE__, :register)
-  end
+  # def register_request() do
+  #   GenServer.cast(__MODULE__, :register)
+  # end
 
   def heartbeat() do
     GenServer.cast(__MODULE__, :heartbeat)
   end
 
   def request() do
-    GenServer.cast(__MODULE__, :request)
+    GenServer.cast(__MODULE__, :req)
   end
 
   def stop() do
@@ -31,7 +31,7 @@ defmodule DataNode.Server do
       {:ok, socket} ->
         IO.puts("Connected to the server successfully")
         # Now we need to send the registration request so that our node would be registered.
-        handle_call(:register, :ok, socket)
+        send(self(), :register)
         {:ok, socket}
 
       {:error, reason} ->
@@ -41,61 +41,61 @@ defmodule DataNode.Server do
   end
 
   @impl true
-  def handle_call(:register, _from, socket) do
-
+  def handle_info(:register, socket) do
     # Firstly i need to send the HEALTH Verb that the request is of the health request.
-    case :gen_tcp.send(socket, "REGISTER\n") do
+    case :gen_tcp.send(socket, "REGISTER" <> "\n") do
       :ok ->
-
         {:ok, {_ip, port}} = :inet.sockname(socket)
+
         node_info = %DataNode.Struct.Node{
           name: System.get_env("NAME"),
-          port: port
+          port: port,
+          time_stamp: DateTime.utc_now() |> DateTime.to_unix()
         }
 
-        json_node_info = JSON.encode!(node_info)
+        json_node_info = JSON.encode!(node_info) <> "\n"
 
         case :gen_tcp.send(socket, json_node_info) do
           :ok ->
             IO.puts("Node registered successfully")
             # Now We need to send the heartbeat and accepts the further requests.
-            send(self(), :heartbeat)
-            send(self(), :req)
-            {:reply, :ok, socket}
+            Process.send_after(self(), :heartbeat, 30_000)
+            {:noreply, socket}
 
           {:error, reason} ->
             IO.puts("Failed to register the node, #{inspect(reason)}")
-            {:reply, {:error, reason}, socket}
+            {:noreply, socket}
         end
 
       {:error, reason} ->
         IO.puts("Failed to send the Register request, #{inspect(reason)}")
-        {:reply, {:error, reason}, socket}
-
+        {:noreply, socket}
     end
   end
 
   @impl true
-  def handle_cast(:heartbeat, socket) do
+  def handle_info(:heartbeat, socket) do
+    IO.puts("Sending heartbeat")
 
-    case :gen_tcp.send(socket, "HEALTH\n") do
+    case :gen_tcp.send(socket, "HEARTBEAT" <> "\n") do
       :ok ->
         heartbeat = %DataNode.Struct.HeartBeat{
-          node_name: "datanode-1",
+          node_name: System.get_env("NAME"),
           # Timestamp
           timestamp: DateTime.utc_now() |> DateTime.to_unix()
         }
 
-        json_encoded_data = JSON.encode!(heartbeat)
+        json_encoded_data = JSON.encode!(heartbeat) <> "\n"
 
         case :gen_tcp.send(socket, json_encoded_data) do
           :ok ->
-            Process.send_after(self(), :heartbeat, 3000)
+            Process.send_after(self(), :heartbeat, 30_000)
             {:noreply, socket}
 
           {:error, reason} ->
             IO.inspect("Failed to send the heartbeat #{inspect(reason)}")
         end
+
       {:error, reason} ->
         IO.puts("Failed to send the Health request, #{inspect(reason)}")
     end
@@ -104,12 +104,12 @@ defmodule DataNode.Server do
   end
 
   @impl true
-  def handle_cast(:request, socket) do
+  def handle_info(:req, socket) do
     case :gen_tcp.recv(socket, 0) do
       {:ok, "GET\n"} ->
         IO.puts("GET request recieved")
 
-        case :gen_tcp.recv(socket, 0) do
+        case :gen_tcp.recv(socket, :line) do
           {:ok, data} ->
             case JSON.decode(data) do
               {:ok, decoded_data} ->
@@ -122,7 +122,7 @@ defmodule DataNode.Server do
                       message: data
                     }
 
-                    case :gen_tcp.send(socket, JSON.encode!(response)) do
+                    case :gen_tcp.send(socket, JSON.encode!(response) <> "\n") do
                       :ok ->
                         IO.puts("Get request fulfilled successfully")
 
@@ -138,7 +138,7 @@ defmodule DataNode.Server do
                       message: inspect(reason)
                     }
 
-                    case :gen_tcp.send(socket, JSON.encode!(response)) do
+                    case :gen_tcp.send(socket, JSON.encode!(response) <> "\n") do
                       :ok ->
                         IO.puts("Failed response sent successfully of get request")
 
@@ -157,7 +157,7 @@ defmodule DataNode.Server do
                   message: "Invalid JSON"
                 }
 
-                :gen_tcp.send(socket, JSON.encode!(response))
+                :gen_tcp.send(socket, JSON.encode!(response) <> "\n")
             end
 
           {:error, reason} ->
@@ -167,7 +167,7 @@ defmodule DataNode.Server do
       {:ok, "POST\n"} ->
         IO.puts("POST request recieved")
 
-        case :gen_tcp.recv(socket, 0) do
+        case :gen_tcp.recv(socket, :line) do
           {:ok, data} ->
             case JSON.decode(data) do
               {:ok, decoded_data} ->
@@ -180,7 +180,7 @@ defmodule DataNode.Server do
                       message: "Chunk Saved successfully to the node #{System.get_env("NAME")}"
                     }
 
-                    case :gen_tcp.send(socket, JSON.encode!(response)) do
+                    case :gen_tcp.send(socket, JSON.encode!(response) <> "\n") do
                       :ok ->
                         IO.puts("POST request response sent successfully")
 
@@ -194,7 +194,7 @@ defmodule DataNode.Server do
                       message: inspect(reason)
                     }
 
-                    case :gen_tcp.send(socket, JSON.encode!(response)) do
+                    case :gen_tcp.send(socket, JSON.encode!(response) <> "\n") do
                       :ok ->
                         IO.puts("ERROR POST request response sent successfully")
 
@@ -286,17 +286,6 @@ defmodule DataNode.Server do
           IO.puts("Failed to create the directory, #{inspect(reason)}")
           {:error, reason}
       end
-    end
-  end
-
-  @impl true
-  def handle_info(msg, socket) do
-    case msg do
-      :req ->
-        handle_cast(msg, socket)
-
-      :heartbeat ->
-        handle_cast(msg, socket)
     end
   end
 
