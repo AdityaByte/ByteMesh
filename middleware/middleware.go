@@ -7,7 +7,6 @@ import (
 	"math"
 	"net"
 	"os"
-	"reflect"
 	"strconv"
 	"strings"
 
@@ -84,65 +83,75 @@ func CreateChunk(file *os.File) (*[]models.Chunk, string, float64, error) {
 }
 
 func GetChunks(filename string) (*[]byte, error) {
-	conn, err := net.Dial("tcp", nameNode)
-	defer func() {
-		if err := conn.Close(); err != nil {
-			logger.ErrorLogger.Println("Failed to close connection", err)
-		}
-	}()
 
+	// Note: Since the connection dealing is done by the coordinator we don't have to open or close the
+	// connection here all the things has been done by the coordinator.
+
+	data, err := coordinator.FetchChunks(filename)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to connect to namenode", err)
+		return data, err
 	}
+	return data, nil
 
-	filename = strings.TrimSpace(filename)
-	if filename == "" {
-		return nil, fmt.Errorf("Empty filename")
-	}
+	// conn, err := net.Dial("tcp", nameNode)
+	// defer func() {
+	// 	if err := conn.Close(); err != nil {
+	// 		logger.ErrorLogger.Println("Failed to close connection", err)
+	// 	}
+	// }()
 
-	writer := bufio.NewWriter(conn)
-	if _, err := writer.WriteString("GET\n" + filename + "\n"); err != nil {
-		return nil, fmt.Errorf("Failed to send the request:", err)
-	}
+	// if err != nil {
+	// 	return nil, fmt.Errorf("Failed to connect to namenode", err)
+	// }
 
-	if err = writer.Flush(); err != nil {
-		return nil, fmt.Errorf("Flush Failed")
-	}
+	// filename = strings.TrimSpace(filename)
+	// if filename == "" {
+	// 	return nil, fmt.Errorf("Empty filename")
+	// }
 
-	reader := bufio.NewReader(conn)
-	response, err := reader.ReadString('\n')
-	if err != nil {
-		return nil, err
-	}
+	// writer := bufio.NewWriter(conn)
+	// if _, err := writer.WriteString("GET\n" + filename + "\n"); err != nil {
+	// 	return nil, fmt.Errorf("Failed to send the request:", err)
+	// }
 
-	response = strings.TrimSpace(response)
-	logger.InfoLogger.Println("The response we are getting is ", response)
+	// if err = writer.Flush(); err != nil {
+	// 	return nil, fmt.Errorf("Flush Failed")
+	// }
 
-	if response != "200" {
-		return nil, fmt.Errorf("Response is not OK", response)
-	}
+	// reader := bufio.NewReader(conn)
+	// response, err := reader.ReadString('\n')
+	// if err != nil {
+	// 	return nil, err
+	// }
 
-	decoder := gob.NewDecoder(conn)
-	var recievedData models.MetaData
-	err = decoder.Decode(&recievedData)
+	// response = strings.TrimSpace(response)
+	// logger.InfoLogger.Println("The response we are getting is ", response)
 
-	if err != nil {
-		return nil, fmt.Errorf("Error occured while decoding the data", err)
-	}
+	// if response != "200" {
+	// 	return nil, fmt.Errorf("Response is not OK", response)
+	// }
 
-	logger.InfoLogger.Println("metadata is :", recievedData)
+	// decoder := gob.NewDecoder(conn)
+	// var recievedData models.MetaData
+	// err = decoder.Decode(&recievedData)
 
-	if reflect.DeepEqual(recievedData, models.MetaData{}) {
-		return nil, fmt.Errorf("No file found at the server...")
-	}
+	// if err != nil {
+	// 	return nil, fmt.Errorf("Error occured while decoding the data", err)
+	// }
 
-	recievedFileData, err := coordinator.FetchChunks(&recievedData)
+	// logger.InfoLogger.Println("metadata is :", recievedData)
 
-	if err != nil {
-		return nil, err
-	}
+	// if reflect.DeepEqual(recievedData, models.MetaData{}) {
+	// 	return nil, fmt.Errorf("No file found at the server...")
+	// }
 
-	return recievedFileData, nil
+	// recievedFileData, err := coordinator.FetchChunks(&recievedData)
+
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	// return recievedFileData, nil
 }
 
 // Since creating connection with the namenode server and fetching all files could be done through the middleware too.
@@ -153,7 +162,7 @@ func FetchUserFiles(user string) (*[]models.MetaData, error) {
 		return nil, fmt.Errorf("ERROR: Failed to create a connection %v", err)
 	}
 
-	defer func(){
+	defer func() {
 		if err := conn.Close(); err != nil {
 			logger.ErrorLogger.Println("ERROR: Failed to close the connection: %v", err)
 		}
@@ -161,16 +170,16 @@ func FetchUserFiles(user string) (*[]models.MetaData, error) {
 
 	// Structure of request
 	/*
-	Request Type: GET
-	OWNER: OWNER_INFO
-	EOF
+		Request Type: GET
+		OWNER: OWNER_INFO
+		EOF
 	*/
 
 	// Now we need to prepare the request and sen't it to the namenode server.
 	writer := bufio.NewWriter(conn)
 
 	// Here we have to write the connection ok right now i am not changing anything just making another verb for fetching out the request ok.
-	if _, err := writer.WriteString("GETALL\n"+ strings.TrimSpace(user) + "\n"); err != nil { // GETALL is the request for fetching out all user specific metadata ok.
+	if _, err := writer.WriteString("GETALL\n" + strings.TrimSpace(user) + "\n"); err != nil { // GETALL is the request for fetching out all user specific metadata ok.
 		return nil, fmt.Errorf("ERROR: Failed to write the request: %v", err)
 	}
 
