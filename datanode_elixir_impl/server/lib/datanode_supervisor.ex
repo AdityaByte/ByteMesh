@@ -13,7 +13,8 @@ defmodule DataNode.Supervisor do
     IO.puts("HOST: #{host} and PORT: #{port}")
 
     children = [
-      {DataNode.Server, {host, port}}
+      {DataNode.Server, 0},
+      {DataNode.Connector, {host, port}}
     ]
 
     Supervisor.init(children, strategy: :one_for_one)
