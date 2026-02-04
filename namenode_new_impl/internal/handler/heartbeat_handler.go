@@ -1,19 +1,16 @@
 package handler
 
 import (
-	"fmt"
-
 	"github.com/AdityaByte/namenode/internal/payloads"
+	"github.com/AdityaByte/namenode/logger"
 )
 
 func HeartBeatHandler(datanodes *payloads.RegisteredDataNodes, heartbeat *payloads.HeartBeat) {
-	for _, nodes := range datanodes.Nodes {
-		if nodes.Name == heartbeat.NodeName {
+	for i, node := range datanodes.Nodes {
+		if node.Name == heartbeat.NodeName {
 			// If the name is same then we have to just update the timestamp.
-			fmt.Println("Time stamp difference - ", heartbeat.TimeStamp-nodes.TimeStamp)
-			nodes.TimeStamp = heartbeat.TimeStamp
-		} else {
-			fmt.Println("I am outside the if block")
+			logger.InfoLogger.Println("Time stamp difference - ", heartbeat.TimeStamp-node.TimeStamp)
+			datanodes.Nodes[i].TimeStamp = heartbeat.TimeStamp
 		}
 	}
 }

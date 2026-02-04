@@ -99,7 +99,7 @@ func handleConnection(conn net.Conn) {
 			// Calling the Registration Handler method.
 			data, err := reader.ReadString('\n')
 			if err != nil {
-				logger.ErrorLogger.Println("Failed to read the node registration data, %v\n", err)
+				logger.ErrorLogger.Printf("Failed to read the node registration data, %v\n", err)
 				return
 			}
 			var reg_node payloads.DataNode
